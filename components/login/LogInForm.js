@@ -1,19 +1,48 @@
 import {
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from "firebase/auth"
 import React, { useContext, useState } from 'react'
 import { Alert, Dimensions, ImageBackground as Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { auth } from '../../config'
+import { auth, db } from '../../config'
 import { UserContext } from '../context/UserContext'
 import { Formik } from 'formik'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import * as Yup from 'yup'
+import { updateDoc, doc, Timestamp } from 'firebase/firestore'
 
 const WIDTH = Dimensions.get('window').width * 1;
 const HEIGHT = Dimensions.get('window').height*1
 
 const LoginForm = ({navigation}) => {
   const {emailHigh,setEmailHigh} = useContext(UserContext)
+
+  const handleForgotPassword = (email) => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email to reset your password');
+      return;
+    }
+
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+        Alert.alert(
+          'Email Sent',
+          'A password reset email has been sent to your address.',
+          [{ text: 'OK' }]
+        );
+      })
+      .catch((error) => {
+        if (__DEV__) {
+          console.error('Error sending password reset email:', error);
+        }
+        if (error.code === 'auth/user-not-found') {
+          Alert.alert('Error', 'No account exists with this email');
+        } else {
+          Alert.alert('Error', 'Failed to send reset email. Please try again');
+        }
+      });
+  };
 
   const LoginFormSchema = Yup.object().shape({
     email: Yup.string().email('Please enter a valid email').required('Email is required'),
@@ -25,21 +54,155 @@ const LoginForm = ({navigation}) => {
   const onLogin = async (values) => {
     try {
       const { email, password } = values;
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      setEmailHigh(email);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainContainer' }],
-      });
+      
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Vérifier si l'email est vérifié
+        if (!user.emailVerified) {
+          Alert.alert(
+            'Email Not Verified',
+            'Please verify your email before logging in. Would you like to receive a new verification email?',
+            [
+              {
+                text: 'Resend',
+                onPress: async () => {
+                  await sendEmailVerification(user);
+                  Alert.alert('Email Sent', 'Please check your inbox');
+                },
+              },
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+            ]
+          );
+          return;
+        }
+
+        // Update last login in Firestore
+        await updateDoc(doc(db, 'BiblioUser', email), {
+          lastLoginAt: Timestamp.now()
+        });
+
+        setEmailHigh(email);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainContainer' }],
+        });
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Technical error:', error);
+        }
+
+        switch (error.code) {
+          case 'auth/wrong-password':
+            Alert.alert(
+              'Login Failed',
+              'Incorrect password. Would you like to reset it?',
+              [
+                {
+                  text: 'Reset Password',
+                  onPress: () => handleForgotPassword(values.email),
+                },
+                {
+                  text: 'Try Again',
+                  style: 'cancel',
+                },
+              ]
+            );
+            break;
+          case 'auth/user-not-found':
+            Alert.alert(
+              'Account Not Found',
+              'No account exists with this email.',
+              [
+                {
+                  text: 'Sign Up',
+                  onPress: () => navigation.navigate('SignUpScreen'),
+                },
+                {
+                  text: 'Try Again',
+                  style: 'cancel',
+                },
+              ]
+            );
+            break;
+          case 'auth/too-many-requests':
+            Alert.alert(
+              'Too Many Attempts',
+              'Please try again later or reset your password.'
+            );
+            break;
+          case 'auth/network-request-failed':
+            Alert.alert(
+              'Connection Error',
+              'Please check your internet connection and try again.'
+            );
+            break;
+          default:
+            Alert.alert(
+              'Login Failed',
+              'Please check your credentials and try again.'
+            );
+        }
+      }
     } catch (error) {
-      console.error('Error logging in:', error);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        Alert.alert('Error', 'Invalid email or password');
-      } else if (error.code === 'auth/invalid-email') {
-        Alert.alert('Error', 'Invalid email address');
-      } else {
-        Alert.alert('Error', error.message);
+      if (__DEV__) {
+        console.error('Technical error:', error);
+      }
+
+      switch (error.code) {
+        case 'auth/wrong-password':
+          Alert.alert(
+            'Login Failed',
+            'Incorrect password. Would you like to reset it?',
+            [
+              {
+                text: 'Reset Password',
+                onPress: () => handleForgotPassword(values.email),
+              },
+              {
+                text: 'Try Again',
+                style: 'cancel',
+              },
+            ]
+          );
+          break;
+        case 'auth/user-not-found':
+          Alert.alert(
+            'Account Not Found',
+            'No account exists with this email.',
+            [
+              {
+                text: 'Sign Up',
+                onPress: () => navigation.navigate('SignUpScreen'),
+              },
+              {
+                text: 'Try Again',
+                style: 'cancel',
+              },
+            ]
+          );
+          break;
+        case 'auth/too-many-requests':
+          Alert.alert(
+            'Too Many Attempts',
+            'Please try again later or reset your password.'
+          );
+          break;
+        case 'auth/network-request-failed':
+          Alert.alert(
+            'Connection Error',
+            'Please check your internet connection and try again.'
+          );
+          break;
+        default:
+          Alert.alert(
+            'Login Failed',
+            'Please check your credentials and try again.'
+          );
       }
     }
   };
@@ -108,8 +271,15 @@ const LoginForm = ({navigation}) => {
                   <Text style={styles.buttonText}>Log In</Text>
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={styles.forgotPasswordButton}
+                  onPress={() => handleForgotPassword(values.email)}
+                >
+                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                </TouchableOpacity>
+
                 <View style={styles.signupContainer}>
-                  <Text>T'es nouveau sur ingy ? </Text>
+                  <Text>New to ingy? </Text>
                   <TouchableOpacity onPress={() => navigation.push('SignUpScreen')}>
                     <Text style={{ color: '#FA8072' }}>Sign Up</Text>
                   </TouchableOpacity>
@@ -152,6 +322,15 @@ const styles = StyleSheet.create({
     fontWeight:'600',
     color:'#fff',
     fontSize:20,
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  forgotPasswordText: {
+    color: '#0096F6',
+    fontSize: 14,
+    fontWeight: '500',
   },
   signupContainer: {
     flexDirection: 'row',

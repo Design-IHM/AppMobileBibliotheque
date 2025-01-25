@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Screen from '../vues/Screen';
@@ -19,6 +19,7 @@ const NewNav = () => {
   const [currentUserNewNav, setCurrentUserNewNav] = useState(null);
   const [datUserTest, setDatUserTest] = useState(false);
   const [datUser, setDatUser] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,18 +32,20 @@ const NewNav = () => {
             setDocRecent(data.docRecent || []);
             setDatUser(data);
           }
+          setIsInitialized(true);
         });
       } else {
         setCurrentUserNewNav(null);
         setDocRecent([]);
         setDatUser(null);
+        setIsInitialized(true);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     emailHigh,
     setEmailHigh,
     docRecent,
@@ -53,16 +56,16 @@ const NewNav = () => {
     setDatUserTest,
     datUser,
     setDatUser
-  };
+  }), [emailHigh, docRecent, currentUserNewNav, datUserTest, datUser]);
+
+  if (!isInitialized) {
+    return null; // ou un composant de chargement
+  }
 
   return (
     <UserContext.Provider value={contextValue}>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="NavLogin" component={NavLogin} />
-          <Stack.Screen name="Screen" component={Screen} />
-          <Stack.Screen name="NavApp" component={NavApp} />
-        </Stack.Navigator>
+        {!currentUserNewNav ? <NavLogin /> : <NavApp />}
       </NavigationContainer>
     </UserContext.Provider>
   );

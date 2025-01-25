@@ -2,36 +2,28 @@
 // https://aboutreact.com/react-native-login-and-signup/
 
 // Import React and Component
-import React, {useState, useEffect, useContext} from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   ActivityIndicator,
   View,
   StyleSheet,
   Image
 } from 'react-native';
-import { UserContext } from '../navigation/NewNav';
-
-
-import {onAuthStateChanged} from "firebase/auth"
+import { UserContext } from '../context/UserContext';
 import { auth } from '../../config';
 
+const ScreenVueUn = ({ navigation }) => {
+  const [animating, setAnimating] = useState(true);
+  const { currentUserNewNav } = useContext(UserContext) || {};
 
-//import AsyncStorage from '@react-native-community/async-storage';
-
-const ScreenVueUn = (props) => {
- //State for ActivityIndicator animation
-  const [animating, setAnimating] = useState(true)
-    const loadingData = useContext(UserContext)
- 
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setAnimating(false);
-        props.navigation.replace(
-          loadingData === false ? 'VueUn' : 'VueUn'
-        )
-    
-    }, 5000);
-  }, []);
+      navigation.replace('VueUn');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -49,17 +41,17 @@ const ScreenVueUn = (props) => {
   );
 };
 
-export default ScreenVueUn;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#307ecc',
   },
   activityIndicator: {
     alignItems: 'center',
     height: 80,
   },
 });
+
+export default ScreenVueUn;

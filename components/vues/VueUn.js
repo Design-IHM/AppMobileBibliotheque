@@ -25,33 +25,61 @@ const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
 
 const VueUn = (props) => {
-  const { currentUserNewNav, datUser, datUserTest } = useContext(UserContext)
-  const [dataWeb, setDataWeb] = useState([])
-  const [loaderWeb, setLoaderWeb] = useState(true)
-  const [voirDepart, setVoirDepart] = useState('departement')
+  const { currentUserNewNav, datUser, datUserTest } = useContext(UserContext) || {};
+  const [dataWeb, setDataWeb] = useState([]);
+  const [loaderWeb, setLoaderWeb] = useState(true);
+  const [voirDepart, setVoirDepart] = useState('departement');
 
   useEffect(() => {
-    if (!currentUserNewNav?.email) return;
+    // Vérifier si le contexte est initialisé
+    if (!currentUserNewNav?.email) {
+      setLoaderWeb(false);
+      return;
+    }
 
-    const q = query(collection(db, 'BiblioWeb'), orderBy('name', 'asc'))
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const items = []
-      querySnapshot.forEach((doc) => {
-        items.push(doc.data())
-      })
-      setDataWeb(items)
-      setLoaderWeb(false)
-    })
+    try {
+      const q = query(collection(db, 'BiblioWeb'), orderBy('name', 'asc'));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const items = [];
+        querySnapshot.forEach((doc) => {
+          items.push(doc.data());
+        });
+        setDataWeb(items);
+        setLoaderWeb(false);
+      }, (error) => {
+        console.error("Erreur lors de la récupération des données:", error);
+        setLoaderWeb(false);
+      });
 
-    return () => unsubscribe()
-  }, [currentUserNewNav?.email])
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Erreur lors de l'initialisation du listener:", error);
+      setLoaderWeb(false);
+    }
+  }, [currentUserNewNav?.email]);
 
-  if (!currentUserNewNav) {
+  // Afficher un loader pendant le chargement initial
+  if (loaderWeb) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Please log in to view content</Text>
+        <ActivityIndicator size="large" color="#0000ff" />
       </View>
-    )
+    );
+  }
+
+  // Rediriger vers la connexion si pas d'utilisateur
+  if (!currentUserNewNav?.email) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Veuillez vous connecter pour accéder à cette page</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => props.navigation.navigate('LoginScreen')}
+        >
+          <Text style={styles.buttonText}>Se connecter</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (
@@ -229,6 +257,16 @@ const styles = StyleSheet.create({
   },
   barre: {
     marginTop: 5,
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    padding: 10,
+    borderRadius: 5,
+    margin: 10,
+  },
+  buttonText: {
+    fontSize: 18,
+    color: '#fff',
   },
 })
 

@@ -1,10 +1,10 @@
 import { Picker } from '@react-native-picker/picker';
-import { Timestamp, doc, setDoc } from "firebase/firestore";
+import { Timestamp, doc, setDoc, getDoc } from "firebase/firestore";
 import React, { useContext, useState } from 'react';
 import { Alert, Dimensions, Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, storage, db } from '../../config';
 import { UserContext } from '../context/UserContext';
@@ -18,13 +18,26 @@ const SignUpForm = ({navigation}) => {
   const {emailHigh, setEmailHigh} = useContext(UserContext);
   const [selectedLevel, setSelectedLevel] = useState('');
   const [image, setImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const SignupFormSchema = Yup.object().shape({
-    email: Yup.string().email('Please enter a valid email').required('Email is required'),
-    username: Yup.string().required().min(2, 'A username is required'),
+    email: Yup.string()
+      .email('Please enter a valid email')
+      .required('Email is required')
+      .matches(
+        /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        'Invalid email format'
+      ),
+    username: Yup.string()
+      .required('Username is required')
+      .min(2, 'Username must be at least 2 characters'),
     password: Yup.string()
       .required('Password is required')
-      .min(6, 'Password must be at least 6 characters'),
+      .min(6, 'Password must be at least 6 characters')
+      .matches(
+        /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d\W_]{6,}$/,
+        'Password must contain at least one letter and one number'
+      ),
     confirmPassword: Yup.string()
       .required('Password confirmation is required')
       .oneOf([Yup.ref('password'), null], 'Passwords must match')
@@ -79,84 +92,104 @@ const SignUpForm = ({navigation}) => {
     }
 
     try {
-      const { email, password } = values;
-
-      // Créer le compte utilisateur
+      const { email, password, username } = values;
+      
+      // Créer l'utilisateur avec Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Upload l'image si elle existe
-      let imageUrl = null;
-      if (image) {
-        imageUrl = await uploadImage();
+      // Upload de l'image de profil si elle existe
+      const profilePictureUrl = await uploadImage();
+
+      // Créer le document utilisateur dans Firestore
+      await setDoc(doc(db, 'BiblioUser', email), {
+        username,
+        email,
+        level: selectedLevel,
+        profilePicture: profilePictureUrl,
+        createdAt: Timestamp.now(),
+        emailVerified: false,
+        lastLoginAt: Timestamp.now()
+      });
+
+      setEmailHigh(email);
+      
+      // Envoyer un email de vérification en arrière-plan
+      sendEmailVerification(user).catch(error => {
+        console.error('Erreur lors de l\'envoi de l\'email de vérification:', error);
+      });
+
+      // Afficher le message de succès
+      Alert.alert(
+        'Welcome!',
+        'Your account has been created successfully. A verification email has been sent.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainContainer' }],
+              });
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+
+    } catch (error) {
+      // Log l'erreur en développement uniquement
+      if (__DEV__) {
+        console.error('Technical error:', error);
       }
 
-      // Créer le document utilisateur
-      await setDoc(doc(db, 'BiblioUser', values.email), {
-        owner_uid: user.uid,
-        username: values.username,
-        email: values.email,
-        createdAt: Timestamp.now(),
-        profile_picture: imageUrl || '',
-        level: selectedLevel,
-        recent: [],
-        etat: 'ras',
-        etat1: 'ras',
-        etat2: 'ras',
-        etat3: 'ras',
-        architest1: 0,
-        architest2: 0,
-        architest3: 0,
-        etatshop: 'ras',
-        etatshop1: 'ras',
-        etatshop2: 'ras',
-        etatshop3: 'ras',
-        etatshop4: 'ras',
-        etatshop5: 'ras',
-        etatshop6: 'ras',
-        etatshop7: 'ras',
-        etatshop8: 'ras',
-        etatshop9: 'ras',
-        etatshop10: 'ras',
-        etatshop11: 'ras',
-        etatshop12: 'ras',
-        etatshop13: 'ras',
-        etatshop14: 'ras',
-        etatshop15: 'ras',
-        tabEtat1: ['','',''],
-        tabEtat2: ['','',''],
-        tabEtat3: ['','',''],
-        docRecent: []
-      });
-
-      setEmailHigh(values.email);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainContainer' }],
-      });
-    } catch (error) {
-      console.error('Error signing up:', error);
-      if (error.code === 'auth/email-already-in-use') {
-        Alert.alert(
-          'Email Already in Use',
-          'This email address is already registered. Please try logging in instead.',
-          [
-            { 
-              text: 'Go to Login', 
-              onPress: () => navigation.navigate('LoginScreen')
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            }
-          ]
-        );
-      } else if (error.code === 'auth/invalid-email') {
-        Alert.alert('Invalid Email', 'Please enter a valid email address');
-      } else if (error.code === 'auth/weak-password') {
-        Alert.alert('Weak Password', 'Password should be at least 6 characters');
-      } else {
-        Alert.alert('Error', error.message);
+      // Messages d'erreur utilisateur
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          Alert.alert(
+            'Email Already Used',
+            'An account already exists with this email.',
+            [
+              {
+                text: 'Login',
+                onPress: () => navigation.navigate('LoginScreen', { email: values.email }),
+              },
+              {
+                text: 'Try Again',
+                style: 'cancel',
+              },
+            ]
+          );
+          break;
+        case 'auth/invalid-email':
+          Alert.alert(
+            'Invalid Email',
+            'Please enter a valid email address.'
+          );
+          break;
+        case 'auth/operation-not-allowed':
+          Alert.alert(
+            'Sign Up Not Available',
+            'Registration is temporarily disabled. Please try again later.'
+          );
+          break;
+        case 'auth/weak-password':
+          Alert.alert(
+            'Weak Password',
+            'Password should be at least 6 characters long.'
+          );
+          break;
+        case 'auth/network-request-failed':
+          Alert.alert(
+            'Connection Error',
+            'Please check your internet connection and try again.'
+          );
+          break;
+        default:
+          Alert.alert(
+            'Sign Up Failed',
+            'An error occurred. Please try again.'
+          );
       }
     }
   };
@@ -279,9 +312,9 @@ const SignUpForm = ({navigation}) => {
                 <TouchableOpacity
                   style={styles.button(isValid && selectedLevel)}
                   onPress={handleSubmit}
-                  disabled={!isValid || !selectedLevel}
+                  disabled={!isValid || !selectedLevel || isLoading}
                 >
-                  <Text style={styles.buttonText}>Sign Up</Text>
+                  <Text style={styles.buttonText}>{isLoading ? 'Loading...' : 'Sign Up'}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.loginContainer}>
