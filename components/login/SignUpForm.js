@@ -127,10 +127,7 @@ const SignUpForm = ({navigation}) => {
           {
             text: 'OK',
             onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainContainer' }],
-              });
+              navigation.replace('MainContainer');
             },
           },
         ],

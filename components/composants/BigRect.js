@@ -2,14 +2,12 @@ import { useNavigation } from '@react-navigation/native';
 import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import React, { useContext, useState } from 'react';
 import { ImageBackground, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { db } from '../../firebaseConfig'; // Assurez-vous que l'importation est correcte
-import { UserContext } from '../navigation/NewNav';
-import { UserContexte } from '../vues/MainContainer';
+import { db } from '../../config'; 
+import { UserContextNavApp } from '../navigation/NavApp';
 
 const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, datUser, commentaire, nomBD, type }) => {
-  const navigation = useNavigation();  // Utilisation de useNavigation pour obtenir l'objet navigation
-  const { modal, setModal } = useContext(UserContexte);
-  const { currentUserNewNav } = useContext(UserContext);
+  const navigation = useNavigation();  
+  const { currentUserdata } = useContext(UserContextNavApp);
 
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -27,27 +25,30 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
       nomBD,
       type,
     });
-    setModal(false);
   };
 
   const ajouter = async () => {
     try {
-      const washingtonRef = doc(db, 'BiblioUser', datUser.email);  // Utilisation correcte de db
-      await updateDoc(washingtonRef, {
-        docRecentRegarder: arrayUnion({ cathegorieDoc: cathegorie, type }),
-      });
+      if (currentUserdata?.email) {
+        const userRef = doc(db, 'BiblioUser', currentUserdata.email);
+        await updateDoc(userRef, {
+          docRecentRegarder: arrayUnion({ cathegorieDoc: cathegorie, type }),
+        });
+      }
       voirProduit();
     } catch (error) {
-      console.error("Erreur lors de l'ajout à Firebase:", error);
+      console.error("Error adding to Firebase:", error);
     }
   };
 
   return (
     <View style={styles.contain}>
       <TouchableOpacity onPress={ajouter}>
-        <ImageBackground style={styles.container} source={{ uri: image }}>
-          {/* Vous pouvez ajouter d'autres contenus ou styles ici */}
-        </ImageBackground>
+        <ImageBackground 
+          style={styles.container} 
+          source={{ uri: image }}
+          resizeMode="cover"
+        />
       </TouchableOpacity>
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{name.length > 10 ? `${name.slice(0, 10)}...` : name}</Text>
@@ -77,12 +78,12 @@ const styles = StyleSheet.create({
     height: 150,
     width: 100,
     margin: 5,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   container: {
-    height: 130,
-    width: 100,
-    backgroundColor: '#DCDCDC',
-    borderRadius: 10,
+    height: '100%',
+    width: '100%',
   },
   infoContainer: {
     alignItems: 'center',

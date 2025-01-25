@@ -1,7 +1,7 @@
 import { View, Text, SafeAreaView, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState, useContext } from 'react';
 import BigRect from '../BigRect';
-import { UserContext } from '../../context/UserContext';
+import { UserContextNavApp } from '../../navigation/NavApp';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config';
 
@@ -9,12 +9,12 @@ const WIDTH = Dimensions.get('window').height;
 
 const Cathegorie = ({ route, navigation }) => {
   const { cathegorie } = route.params || {};
-  const { currentUserNewNav } = useContext(UserContext) || {};
+  const { currentUserdata } = useContext(UserContextNavApp) || {};
   const [data, setData] = useState([]);
   const [loader, setLoader] = useState(true);
 
   useEffect(() => {
-    if (!currentUserNewNav?.email) {
+    if (!currentUserdata?.email) {
       setLoader(false);
       return;
     }
@@ -33,16 +33,16 @@ const Cathegorie = ({ route, navigation }) => {
         setData(items);
         setLoader(false);
       }, (error) => {
-        console.error("Erreur lors de la récupération des données:", error);
+        console.error("Error fetching data:", error);
         setLoader(false);
       });
 
       return () => unsubscribe();
     } catch (error) {
-      console.error("Erreur lors de l'initialisation du listener:", error);
+      console.error("Error initializing listener:", error);
       setLoader(false);
     }
-  }, [currentUserNewNav?.email]);
+  }, [currentUserdata?.email]);
 
   if (loader) {
     return (
@@ -52,10 +52,10 @@ const Cathegorie = ({ route, navigation }) => {
     );
   }
 
-  if (!currentUserNewNav?.email) {
+  if (!currentUserdata?.email) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Veuillez vous connecter pour accéder à cette page</Text>
+        <Text>Please log in to access this page</Text>
       </View>
     );
   }
@@ -75,7 +75,7 @@ const Cathegorie = ({ route, navigation }) => {
           marginTop: 10,
           fontSize: 20
         }}>
-          {cathegorie || 'Catégorie non spécifiée'}
+          {cathegorie || 'Category not specified'}
         </Text>
       </View>
       <View style={{
@@ -88,6 +88,7 @@ const Cathegorie = ({ route, navigation }) => {
             <BigRect
               key={index}
               type={item.type}
+              datUser={currentUserdata}
               cathegorie={item.cathegorie}
               props={navigation}
               name={item.name}
