@@ -1,0 +1,71 @@
+import 'react-native-gesture-handler';
+import React, { useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import Screen from '../vues/Screen';
+import NavLogin from './NavLogin';
+import NavApp from './NavApp';
+import { UserContext } from '../context/UserContext';
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from '../../config';
+import { doc, onSnapshot } from 'firebase/firestore';
+
+const Stack = createStackNavigator();
+
+const NewNav = () => {
+  const [donnees, setDonnees] = useState('');
+  const [emailHigh, setEmailHigh] = useState('');
+  const [docRecent, setDocRecent] = useState([]);
+  const [currentUserNewNav, setCurrentUserNewNav] = useState(null);
+  const [datUserTest, setDatUserTest] = useState(false);
+  const [datUser, setDatUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserNewNav(user);
+        const userDocRef = doc(db, 'BiblioUser', user.email);
+        onSnapshot(userDocRef, (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            setDocRecent(data.docRecent || []);
+            setDatUser(data);
+          }
+        });
+      } else {
+        setCurrentUserNewNav(null);
+        setDocRecent([]);
+        setDatUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const contextValue = {
+    emailHigh,
+    setEmailHigh,
+    docRecent,
+    setDocRecent,
+    currentUserNewNav,
+    setCurrentUserNewNav,
+    datUserTest,
+    setDatUserTest,
+    datUser,
+    setDatUser
+  };
+
+  return (
+    <UserContext.Provider value={contextValue}>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="NavLogin" component={NavLogin} />
+          <Stack.Screen name="Screen" component={Screen} />
+          <Stack.Screen name="NavApp" component={NavApp} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </UserContext.Provider>
+  );
+};
+
+export default NewNav;
