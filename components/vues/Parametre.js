@@ -1,12 +1,14 @@
-import { Dimensions, Image, ImageBackground, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Modal, Pressable, Button } from 'react-native'
+import { Dimensions, Image, ImageBackground, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Modal, Pressable, Button, Alert } from 'react-native'
 import React, { useEffect, useState, useContext } from 'react'
-import Dialog from "react-native-dialog";
+import Dialog from "react-native-dialog"
+import * as ImagePicker from 'expo-image-picker'
+import { Ionicons } from '@expo/vector-icons'
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
 const Teb = ["","","",""]
 import { auth, db } from '../../config'
-import { collection, doc, onSnapshot } from 'firebase/firestore'
-import { UserContext } from '../navigation/NewNav'
+import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { UserContext } from '../context/UserContext'
 
 export default function Parametre(props) {
   const {currentUserNewNav} = useContext(UserContext)
@@ -16,7 +18,43 @@ export default function Parametre(props) {
   const [imageCart, setimageCart] = useState("")
   const [nameCart, setnameCart] = useState("")
   const [descCart, setdescCart] = useState("")
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(false)
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Nous avons besoin de votre permission pour accéder à vos photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0] && result.assets[0].uri) {
+        if (currentUserNewNav?.email) {
+          try {
+            await updateDoc(doc(db, "BiblioUser", currentUserNewNav.email), {
+              imageUri: result.assets[0].uri
+            });
+            Alert.alert("Succès", "Photo de profil mise à jour avec succès");
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour de l'image:", error);
+            Alert.alert("Erreur", "Impossible de mettre à jour la photo de profil");
+          }
+        } else {
+          Alert.alert("Erreur", "Vous devez être connecté pour modifier votre photo de profil");
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la sélection de l'image:", error);
+      Alert.alert("Erreur", "Impossible de sélectionner l'image");
+    }
+  };
 
   const showDialog = () => {
     setVisible(true);
@@ -35,24 +73,43 @@ export default function Parametre(props) {
   };
 
   useEffect(() => {
+    if (!currentUserNewNav?.email) {
+      console.log("Pas d'email utilisateur disponible");
+      return;
+    }
+
     setTimeout(() => {
       setTestT(false);
     }, 500);
 
-    const unsubscribe = onSnapshot(
-      doc(db, 'BiblioUser', currentUserNewNav.email),
-      (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          setDatUserParams(docSnapshot.data());
+    try {
+      const unsubscribe = onSnapshot(
+        doc(db, 'BiblioUser', currentUserNewNav.email),
+        (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            setDatUserParams(docSnapshot.data());
+          } else {
+            console.log("Aucune donnée utilisateur trouvée");
+          }
+        },
+        (error) => {
+          console.error("Erreur lors de la récupération des données utilisateur:", error);
         }
-      },
-      (error) => {
-        console.error("Error getting user data:", error);
-      }
-    );
+      );
 
-    return () => unsubscribe();
-  }, [currentUserNewNav.email]);
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Erreur lors de la configuration du listener:", error);
+    }
+  }, [currentUserNewNav?.email]);
+
+  if (testT) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
 
   const Carte=({dev})=>{
     return(
@@ -85,45 +142,117 @@ export default function Parametre(props) {
 
   return (
     <>
-    { testT ? 
-      <ActivityIndicator size="large" color="red" />
-      :
-    (
     <SafeAreaView>
       <View style={{margin:10}}>
-      <View style={{flexDirection:'row',justifyContent:'flex-end',margin:1,height:25,marginBottom:10}}>
-        <Text style={{fontSize:25,fontWeight:'900'}}></Text>
-        <Text style={{fontSize:25,fontWeight:'900'}}></Text>
-        <TouchableOpacity onPress={showDialog} style={{borderRadius:10,flexDirection:'row',marginRight:15,marginTop:10}}>
-        <Image source={require('../../assets/deconnect.png')} style={{height:20,width:20}} />
-        <Text style={{fontSize:13,fontWeight:'900',color:'#000',textAlign:'center',marginTop:2,right:1,marginLeft:2}}>Deconnexion</Text>
+        <View style={{flexDirection:'row',justifyContent:'flex-end',margin:1,height:25,marginBottom:10}}>
+          <TouchableOpacity 
+            onPress={showDialog} 
+            style={{
+              flexDirection: 'row',
+              marginRight: 15,
+              marginTop: 10,
+              alignItems: 'center'
+            }}
+          >
+            <Image 
+              source={require('../../assets/deconnect.png')} 
+              style={{height:20, width:20}} 
+            />
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '900',
+              color: '#000',
+              marginLeft: 2
+            }}>
+              Déconnexion
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity 
+          onPress={() => Modif(
+            datUserParams?.imageUri || '',
+            datUserParams?.name || '',
+            datUserParams?.email || '',
+            datUserParams?.tel || '',
+            datUserParams?.departement || '',
+            datUserParams?.niveau || ''
+          )} 
+          style={{backgroundColor:'#DCDCDC',height:150,marginTop:20,flexDirection:'row',borderRadius:20,margin:10,alignSelf:'center',width:WIDTH*0.9}}
+        >
+          <TouchableOpacity 
+            onPress={pickImage}
+            style={{
+              height: 120,
+              width: 120,
+              borderRadius: 80,
+              backgroundColor: '#f0f0f0',
+              margin: 5,
+              marginLeft: 25,
+              marginTop: 15,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {datUserParams?.imageUri ? (
+              <Image 
+                style={{
+                  height: 120,
+                  width: 120,
+                  borderRadius: 80
+                }} 
+                source={{ uri: datUserParams.imageUri }}
+              />
+            ) : (
+              <Image 
+                style={{
+                  height: 120,
+                  width: 120,
+                  borderRadius: 80
+                }} 
+                source={require('../../assets/userIc2.png')}
+              />
+            )}
+            <View style={{
+              position: 'absolute',
+              bottom: 5,
+              right: 5,
+              backgroundColor: '#4a90e2',
+              borderRadius: 15,
+              padding: 8,
+              elevation: 5,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+            }}>
+              <Ionicons name="camera" size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          <View style={{marginTop:25}}>
+            <Text style={{fontSize:17,fontWeight:'900'}}>
+              {datUserParams?.name ? (datUserParams.name.length > 10 ? datUserParams.name.slice(0,10) + "..." : datUserParams.name) : "Sans nom"}
+            </Text>
+            <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.email || 'Email non défini'}</Text>
+            <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.departement || 'Département non défini'}</Text>
+            <Text style={{fontSize:15,color:'gray'}}>niveau : {datUserParams?.niveau || 'Non défini'}</Text>
+            <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.tel || 'Téléphone non défini'}</Text>
+          </View>
         </TouchableOpacity>
-      </View>
-      
-      <TouchableOpacity onPress={()=>Modif(datUserParams.image,datUserParams.name,datUserParams.email,datUserParams.tel,datUserParams.departement,datUserParams.niveau)} style={{backgroundColor:'#DCDCDC',height:150,marginTop:20,flexDirection:'row',borderRadius:20,margin:10,alignSelf:'center',width:WIDTH*0.9}}>
-        <View style={{height:120,width:120,borderRadius:80,backgroundColor:'gray',margin:5,marginLeft:25,marginTop:15}}>
-        <Image style={{height:120,width:120,borderRadius:80,}} source={{uri:datUserParams.image}}/>
-        </View>
-        <View style={{marginTop:25}}>
-          <Text style={{fontSize:17,fontWeight:'900'}}>{datUserParams.name.slice(0,10)+"..."}</Text>
-          <Text style={{fontSize:15,color:'gray'}}>{datUserParams.email}</Text>
-          <Text style={{fontSize:15,color:'gray'}}>{datUserParams.departement}</Text>
-          <Text style={{fontSize:15,color:'gray'}}> niveau : {datUserParams.niveau}</Text>
-          <Text style={{fontSize:15,color:'gray'}}>{datUserParams.tel}</Text>
-        </View>
-      </TouchableOpacity>
       </View>
       {/** HISTORIQUE */}
       <View style={{marginTop:5}}>
         <View style={{height:5,width:WIDTH,backgroundColor:'#DCDCDC'}}></View>
-      <Text style={{fontSize:25,fontWeight:'900',textAlign:'center',marginTop:10}}>HISTORIQUES</Text>
-      <ScrollView horizontal style={{height:350}}>
-      {
-        datUserParams.docRecent.map((dev,index)=>
-          <Carte dev={dev} key={index} />
-        )
-      }
-      </ScrollView>
+        <Text style={{fontSize:25,fontWeight:'900',textAlign:'center',marginTop:10}}>HISTORIQUES</Text>
+        <ScrollView horizontal style={{height:350}}>
+        {
+          datUserParams?.docRecent ? 
+            datUserParams.docRecent.map((dev,index)=>
+              <Carte dev={dev} key={index} />
+            )
+          : <Text style={{textAlign: 'center', marginTop: 20}}>Aucun historique disponible</Text>
+        }
+        </ScrollView>
       </View>
 
       <ImageBackground source={require('../../assets/bibi.jpg')}  style={{height:150,width:WIDTH}}></ImageBackground>
@@ -164,7 +293,6 @@ export default function Parametre(props) {
     </View>
     
     </SafeAreaView>
-  )}
   </>
   )
 }
