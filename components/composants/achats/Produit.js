@@ -1,9 +1,10 @@
+import firebase from 'firebase/app';
 import { Dimensions, Image, ScrollView, Text, TouchableOpacity, View, Alert, Modal, SafeAreaView, TextInput, StyleSheet, Pressable } from 'react-native';
 import Swiper from 'react-native-swiper';
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContextNavApp } from '../../navigation/NavApp';
-import { db } from '../../../config';
-import { doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, collection, onSnapshot } from "firebase/firestore";
+import { db } from '../../../firebaseConfig';
+import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot } from "firebase/firestore";
 import BigRect from '../BigRect';
 import PubCar from '../PubCar';
 import PubRect from '../PubRect';
@@ -29,7 +30,9 @@ const Produit = ({ route, navigation }) => {
 
   const dt = Timestamp.fromDate(new Date());
 
+
   useEffect(() => {
+    
     if (!currentUserdata?.email) return;
 
     const userRef = doc(db, 'BiblioUser', currentUserdata.email);
@@ -170,8 +173,6 @@ const Produit = ({ route, navigation }) => {
       exemplaire: exemplaire
     })
   }
-
-  const ref = db.collection("BiblioInformatique")
 
   const voirComm = (name, cathegorie, image, desc, exemplaire) => {
     navigation.navigate('PageBiblio', {
