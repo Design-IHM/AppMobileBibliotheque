@@ -215,9 +215,18 @@ const VueUn = (props) => {
                 <TouchableOpacity
                   key={index}
                   style={styles.bookCard}
-                  onPress={() => props.navigation.navigate('VueDepart', { 
-                    cathegorieDoc: book.cathegorieDoc,
-                    type: book.type
+                  onPress={() => props.navigation.navigate('Produit', {
+                    name: book.nameDoc,
+                    desc: book.description || '',
+                    image: book.image,
+                    cathegorie: book.cathegorieDoc,
+                    type: book.type,
+                    salle: book.salle || '',
+                    etagere: book.etagere || '',
+                    exemplaire: book.exemplaire || 1,
+                    commentaire: book.commentaire || [],
+                    nomBD: 'BiblioLivre',
+                    datUser: datUser
                   })}
                 >
                   <Image
@@ -251,9 +260,18 @@ const VueUn = (props) => {
                 <TouchableOpacity
                   key={index}
                   style={styles.bookCard}
-                  onPress={() => props.navigation.navigate('VueDepart', {
-                    cathegorieDoc: book.cathegorieDoc,
-                    type: book.type
+                  onPress={() => props.navigation.navigate('Produit', {
+                    name: book.nameDoc,
+                    desc: book.description || '',
+                    image: book.image,
+                    cathegorie: book.cathegorieDoc,
+                    type: book.type,
+                    salle: book.salle || '',
+                    etagere: book.etagere || '',
+                    exemplaire: book.exemplaire || 1,
+                    commentaire: book.commentaire || [],
+                    nomBD: 'BiblioLivre',
+                    datUser: datUser
                   })}
                 >
                   <Image
