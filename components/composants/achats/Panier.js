@@ -9,68 +9,83 @@ const WIDTH = Dimensions.get('window').width
 const HEIGHT = Dimensions.get('window').height
 
 const CathegorieBiblio = ({cathegorie, donnee}) => {
-    const renderReservations = () => {
-        const reservations = [];
-        
-        if (donnee.etat1 === 'reserv' && donnee.tabEtat1) {
-            reservations.push({
-                name: donnee.tabEtat1[0],
-                cathegorie: donnee.tabEtat1[1],
-                image: donnee.tabEtat1[2],
-                exemplaire: donnee.tabEtat1[3],
-                nomBD: donnee.tabEtat1[4],
-                dateHeure: donnee.tabEtat1[5]
-            });
-        }
-        
-        if (donnee.etat2 === 'reserv' && donnee.tabEtat2) {
-            reservations.push({
-                name: donnee.tabEtat2[0],
-                cathegorie: donnee.tabEtat2[1],
-                image: donnee.tabEtat2[2],
-                exemplaire: donnee.tabEtat2[3],
-                nomBD: donnee.tabEtat2[4],
-                dateHeure: donnee.tabEtat2[5]
-            });
-        }
-        
-        if (donnee.etat3 === 'reserv' && donnee.tabEtat3) {
-            reservations.push({
-                name: donnee.tabEtat3[0],
-                cathegorie: donnee.tabEtat3[1],
-                image: donnee.tabEtat3[2],
-                exemplaire: donnee.tabEtat3[3],
-                nomBD: donnee.tabEtat3[4],
-                dateHeure: donnee.tabEtat3[5]
-            });
-        }
+    const [currentUser, setCurrentUser] = useState("eben1@gmail.com");
+    const [biblioData, setBiblioData] = useState([]);
+    const [biblioLoader, setBiblioLoader] = useState(true);
+    const [number, setNumber] = useState(null);
+    const [imgActive, setImgActive] = useState(0);
 
-        return reservations;
-    };
+    function getData(dos){
+     let ref= collection(db, 'Blio') 
+     const unsubscribe = onSnapshot(ref, (querySnapshot) => { 
+       const items = []
+       querySnapshot.forEach((doc) => {
+         items.push(doc.data())
+       })
+       setBiblioData(items)
+       setBiblioLoader(false)
+     })
+     return unsubscribe
+    }
+    useEffect(() =>{
+     getData()
+    },[])
+
+    const  onChange = (nativeEvent) => {
+        if(nativeEvent) {
+          const slide = Math.ceil(nativeEvent.contentOffset.x / nativeEvent.layoutMeasurement.width )
+          if(slide != imgActive){
+            setImgActive(slide)
+          }
+        }
+        
+    }
 
     return (
-        <SafeAreaView>
-            <View style={{backgroundColor:'#C8C8C8', justifyContent:'space-between', flexDirection:'row'}}>
-                <Text style={{fontSize:20, fontWeight:'bold', color:'black', margin:10, fontFamily:'Cochin'}}>{cathegorie}</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {renderReservations().map((reservation, index) => (
-                    <Cadre
-                        key={index}
-                        name={reservation.name}
-                        cathegorie={reservation.cathegorie}
-                        image={reservation.image}
-                        exemplaire={reservation.exemplaire}
-                        nomBD={reservation.nomBD}
-                        dateHeure={reservation.dateHeure}
-                    />
-                ))}
-            </ScrollView>
-        </SafeAreaView>
-    );
-};
+       <SafeAreaView>
+   
+         <View style={{backgroundColor:'#C8C8C8' , justifyContent:'space-between',flexDirection:'row' }}>
+           <Text style={{fontSize:20,fontWeight:'bold',color:'black', margin:10,fontFamily:'Cochin'}}>{cathegorie}</Text>
+           
+           
+         </View>
+   
+         <View style={{width:WIDTH,height:400}}>
+             
+   
+             {
+             (donnee.etat1 == 'reserv' ?
+               <Cadre cathegorie2='' matricule={donnee.matricule} name={donnee.tabEtat1[0]} cathegorie={donnee.tabEtat1[1]} image={donnee.tabEtat1[2]} desc='' exemplaire={donnee.tabEtat1[3]} nomBD={donnee.tabEtat1[4]} dateHeure={donnee.tabEtat1[5]}  />
+               : <View></View>
+              
+             )
+           }
+   
+           {
+             (donnee.etat2 == 'reserv' ?
+               <Cadre cathegorie2=''  donnee={donnee} name={donnee.tabEtat2[0]} cathegorie={donnee.tabEtat2[1]} image={donnee.tabEtat2[2]} desc='' exemplaire={donnee.tabEtat2[3]} nomBD={donnee.tabEtat2[4]} dateHeure={donnee.tabEtat2[5]} />
+               : <View></View>
+              
+             )
+           }
+   
+           {
+             (donnee.etat3 == 'reserv' ?
+               <Cadre cathegorie2=''  donnee={donnee} name={donnee.tabEtat3[0]} cathegorie={donnee.tabEtat3[1]} image={donnee.tabEtat3[2]} desc='' exemplaire={donnee.tabEtat3[3]} nomBD={donnee.tabEtat3[4]} dateHeure={donnee.tabEtat3[5]} />
+               : <View></View>
+              
+             )
+           }
+   
+   </View>
+   
+      
+           
+       </SafeAreaView>
+     )
+   }
 
-const CathegorieBiblio1 = ({cathegorie, currentUser, donnee}) => {
+   const CathegorieBiblio1 = ({cathegorie, currentUser, donnee}) => {
    
      const [biblioData1, setBiblioData1] = useState([]);
      const [biblioLoader1, setBiblioLoader1] = useState(true);
@@ -121,66 +136,80 @@ const CathegorieBiblio1 = ({cathegorie, currentUser, donnee}) => {
 
    const Panier = (props) => {
        const [values, setValues] = useState("");
+       const [currentUser, setCurrentUser] = useState('eben1@gmail.com');
        const { currentUserNewNav } = useContext(UserContext);
-       const [dat, setDat] = useState({});
+       const [dat, setDat] = useState(0);
+       const [panierData, setPanierData] = useState([]);
        const [panierLoader, setPanierLoader] = useState(true);
+       const [userData, setUserData] = useState([]);
+       const [userLoader, setUserLoader] = useState(true);
 
-       useEffect(() => {
-           if (!currentUserNewNav?.email) return;
-
-           const userRef = doc(db, "BiblioUser", currentUserNewNav.email);
-           const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
-               if (docSnapshot.exists()) {
-                   const userData = docSnapshot.data();
-                   // Initialiser les états s'ils n'existent pas
-                   if (!userData.etat1) userData.etat1 = 'ras';
-                   if (!userData.etat2) userData.etat2 = 'ras';
-                   if (!userData.etat3) userData.etat3 = 'ras';
-                   setDat(userData);
-               }
+       function getData() {
+           const ref = collection(db, "BiblioInformatique");
+           const unsubscribe = onSnapshot(ref, (querySnapshot) => {
+               const items = [];
+               querySnapshot.forEach((doc) => {
+                   items.push(doc.data());
+               });
+               setPanierData(items);
                setPanierLoader(false);
            });
-
-           return () => unsubscribe();
-       }, [currentUserNewNav?.email]);
-
-       if (!currentUserNewNav?.email) {
-           return (
-               <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                   <Text style={{fontSize: 16}}>Veuillez vous connecter pour voir vos réservations</Text>
-               </View>
-           );
+           return unsubscribe;
        }
 
-       const hasReservations = dat.etat1 === 'reserv' || dat.etat2 === 'reserv' || dat.etat3 === 'reserv';
-       const hasEmprunts = dat.etat1 === 'emprunt' || dat.etat2 === 'emprunt' || dat.etat3 === 'emprunt';
+       function getDataUser(){
+        const refUser = collection(db, "BiblioUser");
+        const unsubscribe = onSnapshot(refUser, (querySnapshot) => { 
+          const items = []
+          querySnapshot.forEach((doc) => {
+            items.push(doc.data())
+          })
+          setUserData(items)
+          setUserLoader(false)
+        })
+      }
+    
+       useEffect(() => {
+           const unsubscribe1 = getData();
+           const unsubscribe2 = getDataUser();
+           return () => {
+               if (unsubscribe1) unsubscribe1();
+               if (unsubscribe2) unsubscribe2();
+           };
+       }, []);
 
        return (
-           <ScrollView>
-               {panierLoader ? (
-                   <ActivityIndicator size="large" color="#00ff00" />
+           <React.Fragment>
+             <ScrollView>
+               {panierLoader || userLoader ? (
+                 <ActivityIndicator size="large" color="#00ff00" />
                ) : (
-                   <View>
-                       {hasReservations ? (
-                           <>
-                               <CathegorieBiblio donnee={dat} cathegorie='Réservations' />
-                               <View style={{height: 1, backgroundColor: '#000'}} />
-                           </>
-                       ) : (
-                           <View style={styles.emptyContainer}>
-                               <Text style={styles.emptyText}>Aucune réservation en cours</Text>
-                           </View>
-                       )}
+                 <View>
+                   {(dat.etat1 == 'reserv' || dat.etat2 == 'reserv' || dat.etat3 == 'reserv') ? (
+                     <>
+                       <CathegorieBiblio donnee={dat} cathegorie='Reservation' />
+                       <View style={{height:1,backgroundColor:'#000'}} />
+                     </>
+                   ) : (
+                     <View>
+                       <Text style={{textAlign:'center', fontWeight:'900', fontSize:28,fontFamily:'Cochin'}}>0 RESERVATION</Text>
+                     </View>
+                   )}
 
-                       {hasEmprunts && (
-                           <>
-                               <CathegorieBiblio1 donnee={dat} cathegorie='Emprunts' />
-                               <View style={{height: 1, backgroundColor: '#000'}} />
-                           </>
-                       )}
-                   </View>
+                   {(dat.etat1 == 'emprunt' || dat.etat2 == 'emprunt' || dat.etat3 == 'emprunt') ? (
+                     <>
+                       <CathegorieBiblio1 donnee={dat} cathegorie='emprunt' />
+                       <View style={{height:1,backgroundColor:'#000'}} />
+                     </>
+                   ) : (
+                     <View>
+                       <Text style={{textAlign:'center', fontWeight:'900', fontSize:28,fontFamily:'Cochin',marginTop:50}}></Text>
+                     </View>
+                   )}
+                 </View>
                )}
-           </ScrollView>
+             </ScrollView>
+           </React.Fragment>
        );
    }
 
@@ -491,17 +520,8 @@ const CathegorieBiblio1 = ({cathegorie, currentUser, donnee}) => {
          margin:WIDTH*0.012,
          
        },
-       emptyContainer: {
-           padding: 20,
-           alignItems: 'center',
-           justifyContent: 'center'
-       },
-       emptyText: {
-           textAlign: 'center',
-           fontWeight: '900',
-           fontSize: 28,
-           fontFamily: 'Cochin'
-       }
+     
+   
    });
 
 export default Panier
