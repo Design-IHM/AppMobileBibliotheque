@@ -20,9 +20,10 @@ import PubCar from '../composants/PubCar'
 import PubRect from '../composants/PubRect'
 import SmallRect from '../composants/SmallRect'
 import { UserContext } from '../context/UserContext'
+import SimilarBooksView from './SimilarBooksView';
 
 // Utilisation de l'adresse IP correcte du serveur Flask
-const API_URL = 'http://172.20.10.9:5000';
+const API_URL = 'http://172.20.10.6:5000';
 
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
@@ -353,6 +354,9 @@ const VueUn = (props) => {
         {renderRecommendationSection()}
 
         <View style={{ height: 0.5, width: WIDTH, backgroundColor: 'gray' }}></View>
+        <SimilarBooksView ></SimilarBooksView>
+        <View style={{ height: 0.5, width: WIDTH, backgroundColor: 'gray' }}></View>
+
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 20 }}>
           <TouchableOpacity

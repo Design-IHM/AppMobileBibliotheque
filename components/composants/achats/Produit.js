@@ -8,6 +8,7 @@ import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, T
 import BigRect from '../BigRect';
 import PubCar from '../PubCar';
 import PubRect from '../PubRect';
+import SimilarBooksView from '../../vues/SimilarBooksView.js';
 
 const WIDTH = Dimensions.get('window').width;
 const HEIGHT = Dimensions.get('window').height;
@@ -279,8 +280,10 @@ const Produit = ({ route, navigation }) => {
         {/**   */}
         {/** AUTRES EXEMPLAIRES  */}
         <View>
-          <Text style={{ textAlign: 'center', fontFamily: 'Georgia', fontWeight: '800', fontSize: 17, marginBottom: 15, marginTop: 15 }}>***Articles Similaires***</Text>
+          <Text style={{ textAlign: 'center', fontFamily: 'Georgia', fontWeight: '800', fontSize: 17, marginBottom: 15, marginTop: 15 }}>Livres Similaires</Text>
         </View>
+        <SimilarBooksView ></SimilarBooksView>
+        <View style={{ height: 0.5, width: WIDTH, backgroundColor: 'gray' }}></View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', margin: 7 }}>
 
           {

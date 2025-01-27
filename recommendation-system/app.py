@@ -4,17 +4,13 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import os
 from collections import Counter
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Initialisation de Flask
 app = Flask(__name__)
-CORS(app)  # Activation de CORS pour toutes les routes
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+CORS(app)
 
 # Chemin vers le fichier service-account-key.json
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +23,122 @@ if not firebase_admin._apps:
     })
 
 db = firestore.client()
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
+
+"""@app.route('/similarbooks', methods=['POST'])
+def similar_books():
+    try:
+        data = request.get_json()
+        book_title = data.get('title', '').strip()
+
+        if not book_title:
+            return jsonify({"error": "Le titre du livre est requis."}), 400
+
+        # Récupérer tous les livres depuis Firebase
+        books_ref = db.collection('BiblioInformatique')
+        books = books_ref.stream()
+        books_list = [{"id": book.id, **book.to_dict()} for book in books]
+        return jsonify({
+            "similar_books": books_list
+        })
+        if not books_list:
+            return jsonify({"error": "Aucun livre trouvé dans la base de données."}), 404
+
+        # Vérifier si le titre donné existe
+        base_book = next((book for book in books_list if book['desc'].lower() == book_title.lower()), None)
+        if not base_book:
+            return jsonify({"error": "Livre non trouvé dans la base de données."}), 404
+
+        # Préparer les données pour la similarité
+        titles = [book['name'] for book in books_list]
+        descriptions = [book.get('desc', '') for book in books_list]
+
+        # Calculer la similarité avec TF-IDF et Cosine Similarity
+        vectorizer = TfidfVectorizer(stop_words='english')
+        tfidf_matrix = vectorizer.fit_transform(descriptions)
+        similarity_matrix = cosine_similarity(tfidf_matrix)
+
+        # Trouver les indices des livres similaires
+        base_index = titles.index(base_book['name'])
+        similarity_scores = list(enumerate(similarity_matrix[base_index]))
+        similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
+
+        # Récupérer les 5 livres les plus similaires (en excluant le livre de base)
+        similar_books_indices = [i for i, score in similarity_scores if i != base_index][:5]
+        similar_books = [books_list[i] for i in similar_books_indices]
+
+        return jsonify({
+            "base_book": base_book,
+            "similar_books": similar_books
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    """
+@app.route('/similarbooks', methods=['POST'])
+def similar_books():
+    try:
+        data = request.get_json()
+        book_title = data.get('title', '').strip()
+
+        if not book_title:
+            return jsonify({"error": "Le titre du livre est requis."}), 400
+
+        # Fetch all books from Firebase
+        books_ref = db.collection('BiblioInformatique')
+        books = books_ref.stream()
+
+        # Construct the books_list, eliminating books without the 'name' attribute
+        books_list = [
+            {"id": book.id, **book.to_dict()}
+            for book in books
+            if 'name' in book.to_dict()  # Only include books with the 'name' field
+        ]
+
+        if not books_list:
+            return jsonify({"error": "Aucun livre avec un champ 'name' trouvé dans la base de données."}), 404
+
+        # Find the book with the given title
+        base_book = next((book for book in books_list if book['name'].lower() == book_title.lower()), None)
+        if not base_book:
+            return jsonify({"error": "Livre non trouvé dans la base de données."}), 404
+
+        # Extract titles and descriptions
+        titles = [book['name'] for book in books_list]
+        descriptions = [book.get('desc', '') for book in books_list]
+
+        # TF-IDF Vectorization
+        vectorizer = TfidfVectorizer(stop_words='english')
+        tfidf_matrix = vectorizer.fit_transform(descriptions)
+
+        # Compute cosine similarity
+        similarity_matrix = cosine_similarity(tfidf_matrix)
+
+        # Find the index of the base book
+        base_index = titles.index(base_book['name'])
+        similarity_scores = list(enumerate(similarity_matrix[base_index]))
+        similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
+
+        # Retrieve top 5 similar books (excluding the base book)
+        similar_books_indices = [i for i, score in similarity_scores if i != base_index][:5]
+        similar_books = [books_list[i] for i in similar_books_indices]
+
+        return jsonify({
+            "base_book": base_book,
+            "similar_books": similar_books
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 def calculate_user_similarity(user1_data, user2_data):
     """

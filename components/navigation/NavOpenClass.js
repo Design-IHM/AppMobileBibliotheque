@@ -41,6 +41,8 @@ const NavOpenClass = () => (
      <Stack.Screen name='VideoCours' component={VideoCours} />
      <Stack.Screen name='PageWeb2' component={PageWeb2} />
      <Stack.Screen name='SmallRect2' component={SmallRect2} />
+     <Stack.Screen name="SimilarBooks" component={SimilarBooksView} />
+
     </Stack.Navigator>
 ) 
 
