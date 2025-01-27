@@ -22,7 +22,7 @@ import SmallRect from '../composants/SmallRect'
 import { UserContext } from '../context/UserContext'
 
 // Utilisation de l'adresse IP correcte du serveur Flask
-const API_URL = 'http://172.20.10.2:5000';
+const API_URL = 'http://172.20.10.9:5000';
 
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height

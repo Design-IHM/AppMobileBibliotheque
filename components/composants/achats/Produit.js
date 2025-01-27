@@ -4,7 +4,7 @@ import Swiper from 'react-native-swiper';
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContextNavApp } from '../../navigation/NavApp';
 import { db } from '../../../firebaseConfig';
-import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot } from "firebase/firestore";
+import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot, getDoc } from "firebase/firestore";
 import BigRect from '../BigRect';
 import PubCar from '../PubCar';
 import PubRect from '../PubRect';
@@ -30,9 +30,38 @@ const Produit = ({ route, navigation }) => {
 
   const dt = Timestamp.fromDate(new Date());
 
+  useEffect(() => {
+    const addToHistory = async () => {
+      if (!currentUserdata?.email) return;
+
+      try {
+        const userRef = doc(db, "BiblioUser", currentUserdata.email);
+        
+        // Vérifier si toutes les données nécessaires sont présentes
+        if (!cathegorie || !type || !image || !name) {
+          console.error("Données manquantes pour l'historique");
+          return;
+        }
+
+        await updateDoc(userRef, {
+          historique: arrayUnion({
+            cathegorieDoc: cathegorie,
+            type: type,
+            image: image,
+            nameDoc: name,
+            desc: desc || '',
+            dateVue: Timestamp.fromDate(new Date())
+          })
+        });
+      } catch (error) {
+        console.error("Error adding to history:", error);
+      }
+    };
+
+    addToHistory();
+  }, [currentUserdata?.email, cathegorie, type, image, name, desc]);
 
   useEffect(() => {
-    
     if (!currentUserdata?.email) return;
 
     const userRef = doc(db, 'BiblioUser', currentUserdata.email);
@@ -48,25 +77,42 @@ const Produit = ({ route, navigation }) => {
 
   const ajouterRecent = async () => {
     if (!currentUserdata?.email) {
-      Alert.alert('Error', 'You must be logged in to reserve a book');
+      Alert.alert('Erreur', 'Vous devez être connecté pour réserver un livre');
       return;
     }
 
     try {
       const userRef = doc(db, "BiblioUser", currentUserdata.email);
+      
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.data();
+      
+      const isAlreadyReserved = [
+        userData.tabEtat1?.[0],
+        userData.tabEtat2?.[0],
+        userData.tabEtat3?.[0]
+      ].includes(TITRE);
+
+      if (isAlreadyReserved) {
+        Alert.alert('Erreur', 'Vous avez déjà réservé ce livre');
+        return;
+      }
+
       await updateDoc(userRef, {
         docRecent: arrayUnion({
           cathegorieDoc: cathegorie,
           type: type,
           image: image,
           nameDoc: name,
-          desc: desc
+          desc: desc,
+          dateReservation: dt
         })
       });
-      reserver(datd);
+      
+      reserver(userData);
     } catch (error) {
       console.error("Error adding recent:", error);
-      Alert.alert('Error', 'Failed to process your reservation');
+      Alert.alert('Erreur', 'Impossible de traiter votre réservation');
     }
   };
 
@@ -75,46 +121,77 @@ const Produit = ({ route, navigation }) => {
 
     try {
       const userRef = doc(db, "BiblioUser", currentUserdata.email);
-      const bookRef = doc(db, 'BiblioInformatique', nomBD);
+      
+      // Récupérer les données actuelles de l'utilisateur
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        Alert.alert('Erreur', 'Utilisateur non trouvé');
+        return;
+      }
+      const userData = userDoc.data();
 
-      if (exemplaire === 0) {
-        Alert.alert('Out of stock');
+      // Initialiser les états s'ils n'existent pas
+      if (!userData.etat1) userData.etat1 = 'ras';
+      if (!userData.etat2) userData.etat2 = 'ras';
+      if (!userData.etat3) userData.etat3 = 'ras';
+
+      // Vérifier si le livre est déjà réservé
+      const isAlreadyReserved = 
+        (userData.tabEtat1 && userData.tabEtat1[0] === TITRE) ||
+        (userData.tabEtat2 && userData.tabEtat2[0] === TITRE) ||
+        (userData.tabEtat3 && userData.tabEtat3[0] === TITRE);
+
+      if (isAlreadyReserved) {
+        Alert.alert('Déjà réservé', 'Vous avez déjà réservé ce livre');
         return;
       }
 
-      if (dos.etat1 === 'ras') {
-        await updateDoc(userRef, {
-          etat1: 'reserv',
-          tabEtat1: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
-        });
-        await updateDoc(bookRef, { exemplaire: exemplaire - 1 });
-        Alert.alert('Reservation in progress');
-      } else if (dos.etat2 === 'ras') {
-        await updateDoc(userRef, {
-          etat2: 'reserv',
-          tabEtat2: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
-        });
-        await updateDoc(bookRef, { exemplaire: exemplaire - 1 });
-        Alert.alert('Reservation in progress');
-      } else if (dos.etat3 === 'ras') {
-        await updateDoc(userRef, {
-          etat3: 'reserv',
-          tabEtat3: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
-        });
-        await updateDoc(bookRef, { exemplaire: exemplaire - 1 });
-        Alert.alert('Reservation in progress');
-      } else {
-        Alert.alert('You already have 3 reservations in progress!');
+      if (exemplaire === 0) {
+        Alert.alert('Rupture de stock', 'Ce livre n\'est plus disponible pour le moment');
+        return;
       }
+
+      // Trouver un emplacement libre pour la réservation
+      let reservationSlot = '';
+      let reservationData = '';
+
+      if (userData.etat1 === 'ras') {
+        reservationSlot = 'etat1';
+        reservationData = 'tabEtat1';
+      } else if (userData.etat2 === 'ras') {
+        reservationSlot = 'etat2';
+        reservationData = 'tabEtat2';
+      } else if (userData.etat3 === 'ras') {
+        reservationSlot = 'etat3';
+        reservationData = 'tabEtat3';
+      } else {
+        Alert.alert('Maximum atteint', 'Vous avez atteint le nombre maximum de réservations');
+        return;
+      }
+
+      // Mettre à jour les données de réservation
+      await updateDoc(userRef, {
+        [reservationSlot]: 'reserv',
+        [reservationData]: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
+      });
+
+      // Mettre à jour le compteur d'exemplaires
+      const bookRef = doc(db, nomBD, name);
+      await updateDoc(bookRef, {
+        exemplaire: exemplaire - 1
+      });
+
+      Alert.alert('Succès', 'Réservation effectuée avec succès');
+      navigation.navigate('Panier');
     } catch (error) {
       console.error("Error reserving:", error);
-      Alert.alert('Error', 'Failed to process your reservation');
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la réservation');
     }
   };
 
   const ajouter = async () => {
     if (!values || !valuesNote) {
-      Alert.alert('Error', 'Please fill in both comment and rating');
+      Alert.alert('Erreur', 'Veuillez remplir les champs de commentaire et de note');
       return;
     }
 
@@ -131,10 +208,10 @@ const Produit = ({ route, navigation }) => {
       setModalComm(false);
       setValues("");
       setValuesNote("");
-      Alert.alert('Success', 'Comment sent successfully');
+      Alert.alert('Succès', 'Commentaire envoyé avec succès');
     } catch (error) {
       console.error("Error adding comment:", error);
-      Alert.alert('Error', 'Failed to send comment');
+      Alert.alert('Erreur', 'Impossible d\'envoyer le commentaire');
     }
   };
 
