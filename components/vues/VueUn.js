@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Dimensions, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Dimensions, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native'
 import elec from '../../assets/biblio/elec.jpg'
 import gi from '../../assets/biblio/info.jpg'
 import math from '../../assets/biblio/math.jpg'
@@ -21,6 +21,9 @@ import PubRect from '../composants/PubRect'
 import SmallRect from '../composants/SmallRect'
 import { UserContext } from '../context/UserContext'
 
+// Utilisation de l'adresse IP correcte du serveur Flask
+const API_URL = 'http://172.20.10.2:5000';
+
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
 
@@ -29,6 +32,127 @@ const VueUn = (props) => {
   const [dataWeb, setDataWeb] = useState([]);
   const [loaderWeb, setLoaderWeb] = useState(true);
   const [voirDepart, setVoirDepart] = useState('departement');
+  const [popularBooks, setPopularBooks] = useState([]);
+  const [userRecommendations, setUserRecommendations] = useState([]);
+  const [similarUsers, setSimilarUsers] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  };
+
+  const fetchUserRecommendations = async (email) => {
+    try {
+      setLoadingRecommendations(true);
+      console.log('Tentative de connexion à:', `${API_URL}/recommendations/similar-users/${email}`);
+      
+      const response = await fetchWithTimeout(
+        `${API_URL}/recommendations/similar-users/${email}`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+        10000
+      );
+      
+      console.log('Statut de la réponse:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Données reçues:', data);
+      
+      if (data.recommendations) {
+        setUserRecommendations(data.recommendations);
+        setSimilarUsers(data.similar_users || []);
+      } else {
+        setUserRecommendations([]);
+        setSimilarUsers([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des recommandations:', error);
+      setUserRecommendations([]);
+      setSimilarUsers([]);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
+  const fetchPopularBooks = async () => {
+    try {
+      console.log('Tentative de connexion à:', `${API_URL}/recommendations/popular`);
+      
+      const response = await fetchWithTimeout(
+        `${API_URL}/recommendations/popular`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+        10000
+      );
+      
+      console.log('Statut de la réponse (populaires):', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Données populaires reçues:', data);
+      
+      if (data.popular_books) {
+        setPopularBooks(data.popular_books);
+      } else {
+        setPopularBooks([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des livres populaires:', error);
+      setPopularBooks([]);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (!currentUserNewNav?.email) return;
+      
+      try {
+        await Promise.all([
+          fetchUserRecommendations(currentUserNewNav.email),
+          fetchPopularBooks()
+        ]);
+      } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUserNewNav?.email]);
 
   useEffect(() => {
     // Vérifier si le contexte est initialisé
@@ -57,6 +181,122 @@ const VueUn = (props) => {
       setLoaderWeb(false);
     }
   }, [currentUserNewNav?.email]);
+
+  const renderRecommendationSection = () => {
+    if (loadingRecommendations) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={styles.loadingText}>Chargement des recommandations...</Text>
+        </View>
+      );
+    }
+
+    if (userRecommendations.length === 0 && popularBooks.length === 0) {
+      return (
+        <View style={styles.noDataContainer}>
+          <Text style={styles.noDataText}>Aucune recommandation disponible pour le moment</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.recommendationContainer}>
+        {/* Section des recommandations personnalisées */}
+        {userRecommendations.length > 0 ? (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Recommandé pour vous</Text>
+            <Text style={styles.sectionSubtitle}>
+              Basé sur {similarUsers.length} utilisateurs similaires
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {userRecommendations.map((book, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.bookCard}
+                  onPress={() => props.navigation.navigate('Produit', {
+                    name: book.nameDoc,
+                    desc: book.description || '',
+                    image: book.image,
+                    cathegorie: book.cathegorieDoc,
+                    type: book.type,
+                    salle: book.salle || '',
+                    etagere: book.etagere || '',
+                    exemplaire: book.exemplaire || 1,
+                    commentaire: book.commentaire || [],
+                    nomBD: 'BiblioLivre',
+                    datUser: datUser
+                  })}
+                >
+                  <Image
+                    source={{ uri: book.image }}
+                    style={styles.bookImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.bookInfo}>
+                    <Text style={styles.bookTitle} numberOfLines={2}>
+                      {book.nameDoc}
+                    </Text>
+                    <Text style={styles.bookCategory}>
+                      {book.cathegorieDoc} • {book.type}
+                    </Text>
+                    <Text style={styles.similarityScore}>
+                      {Math.round(book.similarity_score)}% pertinent
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
+        {/* Section des livres populaires */}
+        {popularBooks.length > 0 ? (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Populaire dans la bibliothèque</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {popularBooks.map((book, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.bookCard}
+                  onPress={() => props.navigation.navigate('Produit', {
+                    name: book.nameDoc,
+                    desc: book.description || '',
+                    image: book.image,
+                    cathegorie: book.cathegorieDoc,
+                    type: book.type,
+                    salle: book.salle || '',
+                    etagere: book.etagere || '',
+                    exemplaire: book.exemplaire || 1,
+                    commentaire: book.commentaire || [],
+                    nomBD: 'BiblioLivre',
+                    datUser: datUser
+                  })}
+                >
+                  <Image
+                    source={{ uri: book.image }}
+                    style={styles.bookImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.bookInfo}>
+                    <Text style={styles.bookTitle} numberOfLines={2}>
+                      {book.nameDoc}
+                    </Text>
+                    <Text style={styles.bookCategory}>
+                      {book.cathegorieDoc} • {book.type}
+                    </Text>
+                    <Text style={styles.popularityScore}>
+                      {book.popularity_score} consultations
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   // Afficher un loader pendant le chargement initial
   if (loaderWeb) {
@@ -121,6 +361,14 @@ const VueUn = (props) => {
             ))}
           </ScrollView>
         </View>
+
+        <View style={{ height: 0.5, width: WIDTH, backgroundColor: 'gray' }}></View>
+
+        
+
+        <View style={{ height: 0.5, width: WIDTH, backgroundColor: 'gray' }}></View>
+
+        {renderRecommendationSection()}
 
         <View style={{ height: 0.5, width: WIDTH, backgroundColor: 'gray' }}></View>
 
@@ -267,6 +515,129 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     color: '#fff',
+  },
+  popularBooksSection: {
+    marginVertical: 20,
+    paddingHorizontal: 10,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    fontFamily: 'Georgia',
+    color: '#333',
+  },
+  popularBooksScroll: {
+    marginBottom: 15,
+  },
+  bookCard: {
+    width: 150,
+    marginRight: 15,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  bookImage: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+  },
+  bookInfo: {
+    padding: 10,
+  },
+  bookTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    fontFamily: 'Georgia',
+  },
+  bookAuthor: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontFamily: 'Georgia',
+  },
+  borrowCount: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  borrowCountText: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Georgia',
+  },
+  recommendationContainer: {
+    paddingVertical: 20,
+  },
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  bookCard: {
+    width: 160,
+    marginHorizontal: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  bookImage: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  bookInfo: {
+    padding: 10,
+  },
+  bookTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  bookCategory: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  similarityScore: {
+    fontSize: 12,
+    color: '#2196F3',
+    fontWeight: '500',
+  },
+  popularityScore: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  noDataContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#666',
   },
 })
 

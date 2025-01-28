@@ -1,10 +1,11 @@
 import firebase from 'firebase/app';
-import { Dimensions, Image, ScrollView, Text, TouchableOpacity, View, Alert, Modal, SafeAreaView, TextInput, StyleSheet, Pressable } from 'react-native';
+import { Dimensions, Image, ScrollView, Text, TouchableOpacity, View, Alert, Modal, SafeAreaView, TextInput, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import Swiper from 'react-native-swiper';
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContextNavApp } from '../../navigation/NavApp';
 import { db } from '../../../firebaseConfig';
-import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot } from "firebase/firestore";
+import { API_URL } from '../../../apiConfig';
+import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot, getDoc } from "firebase/firestore";
 import BigRect from '../BigRect';
 import PubCar from '../PubCar';
 import PubRect from '../PubRect';
@@ -27,12 +28,36 @@ const Produit = ({ route, navigation }) => {
   const [comment, setComment] = useState(commentaire || []);
   const [datd, setDatd] = useState();
   const [mes, setMes] = useState();
+  const [similarBooks, setSimilarBooks] = useState([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
 
   const dt = Timestamp.fromDate(new Date());
 
+  useEffect(() => {
+    const addToHistory = async () => {
+      if (!currentUserdata?.email) return;
+
+      try {
+        const userRef = doc(db, "BiblioUser", currentUserdata.email);
+        await updateDoc(userRef, {
+          historique: arrayUnion({
+            cathegorieDoc: cathegorie,
+            type: type,
+            image: image,
+            nameDoc: name,
+            desc: desc,
+            dateVue: Timestamp.fromDate(new Date())
+          })
+        });
+      } catch (error) {
+        console.error("Error adding to history:", error);
+      }
+    };
+
+    addToHistory();
+  }, [currentUserdata?.email, cathegorie, type, image, name, desc]);
 
   useEffect(() => {
-    
     if (!currentUserdata?.email) return;
 
     const userRef = doc(db, 'BiblioUser', currentUserdata.email);
@@ -46,27 +71,72 @@ const Produit = ({ route, navigation }) => {
     return () => unsubscribe();
   }, [currentUserdata?.email]);
 
+  useEffect(() => {
+    fetchSimilarBooks();
+  }, [name]);
+
+  const fetchSimilarBooks = async () => {
+    if (!name) return;
+
+    setLoadingSimilar(true);
+    try {
+      const response = await fetch(`${API_URL}/similarbooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: name }),
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la récupération des livres similaires.');
+
+      const data = await response.json();
+      setSimilarBooks(data.books || []);
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      setLoadingSimilar(false);
+    }
+  };
+
   const ajouterRecent = async () => {
     if (!currentUserdata?.email) {
-      Alert.alert('Error', 'You must be logged in to reserve a book');
+      Alert.alert('Erreur', 'Vous devez être connecté pour réserver un livre');
       return;
     }
 
     try {
       const userRef = doc(db, "BiblioUser", currentUserdata.email);
+      
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.data();
+      
+      const isAlreadyReserved = [
+        userData.tabEtat1?.[0],
+        userData.tabEtat2?.[0],
+        userData.tabEtat3?.[0]
+      ].includes(TITRE);
+
+      if (isAlreadyReserved) {
+        Alert.alert('Erreur', 'Vous avez déjà réservé ce livre');
+        return;
+      }
+
       await updateDoc(userRef, {
         docRecent: arrayUnion({
           cathegorieDoc: cathegorie,
           type: type,
           image: image,
           nameDoc: name,
-          desc: desc
+          desc: desc,
+          dateReservation: dt
         })
       });
-      reserver(datd);
+      
+      reserver(userData);
     } catch (error) {
       console.error("Error adding recent:", error);
-      Alert.alert('Error', 'Failed to process your reservation');
+      Alert.alert('Erreur', 'Impossible de traiter votre réservation');
     }
   };
 
@@ -75,46 +145,56 @@ const Produit = ({ route, navigation }) => {
 
     try {
       const userRef = doc(db, "BiblioUser", currentUserdata.email);
-      const bookRef = doc(db, 'BiblioInformatique', nomBD);
+      const bookRef = doc(db, nomBD, name);
 
       if (exemplaire === 0) {
-        Alert.alert('Out of stock');
+        Alert.alert('Rupture de stock', 'Ce livre n\'est plus disponible pour le moment');
         return;
       }
 
+      let reservationSlot = '';
+      let reservationData = [];
+
       if (dos.etat1 === 'ras') {
-        await updateDoc(userRef, {
-          etat1: 'reserv',
-          tabEtat1: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
-        });
-        await updateDoc(bookRef, { exemplaire: exemplaire - 1 });
-        Alert.alert('Reservation in progress');
+        reservationSlot = 'etat1';
+        reservationData = 'tabEtat1';
       } else if (dos.etat2 === 'ras') {
-        await updateDoc(userRef, {
-          etat2: 'reserv',
-          tabEtat2: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
-        });
-        await updateDoc(bookRef, { exemplaire: exemplaire - 1 });
-        Alert.alert('Reservation in progress');
+        reservationSlot = 'etat2';
+        reservationData = 'tabEtat2';
       } else if (dos.etat3 === 'ras') {
-        await updateDoc(userRef, {
-          etat3: 'reserv',
-          tabEtat3: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
-        });
-        await updateDoc(bookRef, { exemplaire: exemplaire - 1 });
-        Alert.alert('Reservation in progress');
+        reservationSlot = 'etat3';
+        reservationData = 'tabEtat3';
       } else {
-        Alert.alert('You already have 3 reservations in progress!');
+        Alert.alert('Maximum atteint', 'Vous avez atteint le nombre maximum de réservations');
+        return;
       }
+
+      const updateData = {
+        [reservationSlot]: 'reserv',
+        [reservationData]: [TITRE, cathegorie, image, exemplaire - 1, nomBD, dt]
+      };
+
+      await updateDoc(userRef, updateData);
+      await updateDoc(bookRef, { 
+        exemplaire: exemplaire - 1,
+        reservations: arrayUnion({
+          user: currentUserdata.email,
+          date: dt,
+          titre: TITRE
+        })
+      });
+
+      Alert.alert('Succès', 'Réservation effectuée avec succès');
+      navigation.navigate('Panier');
     } catch (error) {
       console.error("Error reserving:", error);
-      Alert.alert('Error', 'Failed to process your reservation');
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la réservation');
     }
   };
 
   const ajouter = async () => {
     if (!values || !valuesNote) {
-      Alert.alert('Error', 'Please fill in both comment and rating');
+      Alert.alert('Erreur', 'Veuillez remplir les champs de commentaire et de note');
       return;
     }
 
@@ -131,10 +211,10 @@ const Produit = ({ route, navigation }) => {
       setModalComm(false);
       setValues("");
       setValuesNote("");
-      Alert.alert('Success', 'Comment sent successfully');
+      Alert.alert('Succès', 'Commentaire envoyé avec succès');
     } catch (error) {
       console.error("Error adding comment:", error);
-      Alert.alert('Error', 'Failed to send comment');
+      Alert.alert('Erreur', 'Impossible d\'envoyer le commentaire');
     }
   };
 
@@ -250,7 +330,6 @@ const Produit = ({ route, navigation }) => {
 
         {/**COMMENTAIRES */}
         <View style={{ backgroundColor: '#FFF', marginTop: 25 }}>
-
           <Text style={{ textAlign: 'center', fontSize: 20, fontWeight: '600' }}>Commentaires({comment.length}) </Text>
 
           <TouchableOpacity onPress={() => setVoirCom(!voirComm)} style={{ marginLeft: 17, marginTop: 10, marginBottom: 20 }}>
@@ -276,7 +355,47 @@ const Produit = ({ route, navigation }) => {
           }
 
         </View>
-        {/**   */}
+
+        {/**LIVRES SIMILAIRES */}
+        <View style={{ backgroundColor: '#FFF', marginTop: 25 }}>
+          <View style={{ margin: 10 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Livres similaires</Text>
+            {loadingSimilar ? (
+              <ActivityIndicator size="large" color="#007BFF" />
+            ) : similarBooks.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {similarBooks.map((book, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.similarBookCard}
+                    onPress={() => navigation.navigate('Produit', {
+                      name: book.name,
+                      cathegorie: book.cathegorie,
+                      image: book.image,
+                      desc: book.desc,
+                      exemplaire: book.exemplaire,
+                      nomBD: book.nomBD,
+                      type: book.type
+                    })}
+                  >
+                    <Image
+                      source={{ uri: book.image }}
+                      style={styles.similarBookImage}
+                      defaultSource={require('../../../assets/biblio/math.jpg')}
+                    />
+                    <View style={styles.similarBookInfo}>
+                      <Text style={styles.similarBookTitle} numberOfLines={2}>{book.name}</Text>
+                      <Text style={styles.similarBookCategory}>{book.cathegorie}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.noSimilarBooks}>Aucun livre similaire trouvé</Text>
+            )}
+          </View>
+        </View>
+
         {/** AUTRES EXEMPLAIRES  */}
         <View>
           <Text style={{ textAlign: 'center', fontFamily: 'Georgia', fontWeight: '800', fontSize: 17, marginBottom: 15, marginTop: 15 }}>***Articles Similaires***</Text>
@@ -480,6 +599,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 10,
     marginTop: 15
+  },
+  similarBookCard: {
+    width: 150,
+    marginRight: 15,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  similarBookImage: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  similarBookInfo: {
+    padding: 10,
+  },
+  similarBookTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  similarBookCategory: {
+    fontSize: 12,
+    color: '#666',
+  },
+  noSimilarBooks: {
+    textAlign: 'center',
+    color: '#666',
+    marginVertical: 20,
   },
 })
 

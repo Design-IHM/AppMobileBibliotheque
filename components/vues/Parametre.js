@@ -140,160 +140,217 @@ export default function Parametre(props) {
     })
   }
 
-  return (
-    <>
-    <SafeAreaView>
-      <View style={{margin:10}}>
-        <View style={{flexDirection:'row',justifyContent:'flex-end',margin:1,height:25,marginBottom:10}}>
-          <TouchableOpacity 
-            onPress={showDialog} 
-            style={{
-              flexDirection: 'row',
-              marginRight: 15,
-              marginTop: 10,
-              alignItems: 'center'
-            }}
-          >
-            <Image 
-              source={require('../../assets/deconnect.png')} 
-              style={{height:20, width:20}} 
-            />
-            <Text style={{
-              fontSize: 13,
-              fontWeight: '900',
-              color: '#000',
-              marginLeft: 2
-            }}>
-              Déconnexion
-            </Text>
-          </TouchableOpacity>
+  const renderHistorique = () => {
+    if (!datUserParams?.historique || datUserParams.historique.length === 0) {
+      return (
+        <View style={styles.emptyHistoryContainer}>
+          <Text style={styles.emptyHistoryText}>Aucun livre consulté</Text>
         </View>
+      );
+    }
 
-        <TouchableOpacity 
-          onPress={() => Modif(
-            datUserParams?.imageUri || '',
-            datUserParams?.name || '',
-            datUserParams?.email || '',
-            datUserParams?.tel || '',
-            datUserParams?.departement || '',
-            datUserParams?.niveau || ''
-          )} 
-          style={{backgroundColor:'#DCDCDC',height:150,marginTop:20,flexDirection:'row',borderRadius:20,margin:10,alignSelf:'center',width:WIDTH*0.9}}
-        >
+    return (
+      <ScrollView horizontal={false} showsVerticalScrollIndicator={false}>
+        {datUserParams.historique
+          .sort((a, b) => b.dateVue.toDate() - a.dateVue.toDate())
+          .map((book, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.historyItem}
+              onPress={() => props.navigation.navigate('Produit', {
+                name: book.nameDoc,
+                desc: book.desc,
+                image: book.image,
+                cathegorie: book.cathegorieDoc,
+                type: book.type,
+                salle: book.salle || '',
+                etagere: book.etagere || '',
+                exemplaire: book.exemplaire || 1,
+                commentaire: book.commentaire || [],
+                nomBD: 'BiblioLivre',
+                datUser: datUserParams
+              })}
+            >
+              <Image
+                source={{ uri: book.image }}
+                style={styles.historyImage}
+                resizeMode="cover"
+              />
+              <View style={styles.historyInfo}>
+                <Text style={styles.historyTitle} numberOfLines={2}>
+                  {book.nameDoc}
+                </Text>
+                <Text style={styles.historyCategory}>
+                  {book.cathegorieDoc} • {book.type}
+                </Text>
+                <Text style={styles.historyDate}>
+                  Consulté le {book.dateVue.toDate().toLocaleDateString()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+      </ScrollView>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={{margin:10}}>
+          <View style={{flexDirection:'row',justifyContent:'flex-end',margin:1,height:25,marginBottom:10}}>
+            <TouchableOpacity 
+              onPress={showDialog} 
+              style={{
+                flexDirection: 'row',
+                marginRight: 15,
+                marginTop: 10,
+                alignItems: 'center'
+              }}
+            >
+              <Image 
+                source={require('../../assets/deconnect.png')} 
+                style={{height:20, width:20}} 
+              />
+              <Text style={{
+                fontSize: 13,
+                fontWeight: '900',
+                color: '#000',
+                marginLeft: 2
+              }}>
+                Déconnexion
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity 
-            onPress={pickImage}
-            style={{
-              height: 120,
-              width: 120,
-              borderRadius: 80,
-              backgroundColor: '#f0f0f0',
-              margin: 5,
-              marginLeft: 25,
-              marginTop: 15,
-              position: 'relative',
-              overflow: 'hidden'
-            }}
+            onPress={() => Modif(
+              datUserParams?.imageUri || '',
+              datUserParams?.name || '',
+              datUserParams?.email || '',
+              datUserParams?.tel || '',
+              datUserParams?.departement || '',
+              datUserParams?.niveau || ''
+            )} 
+            style={{backgroundColor:'#DCDCDC',height:150,marginTop:20,flexDirection:'row',borderRadius:20,margin:10,alignSelf:'center',width:WIDTH*0.9}}
           >
-            {datUserParams?.imageUri ? (
-              <Image 
-                style={{
-                  height: 120,
-                  width: 120,
-                  borderRadius: 80
-                }} 
-                source={{ uri: datUserParams.imageUri }}
-              />
-            ) : (
-              <Image 
-                style={{
-                  height: 120,
-                  width: 120,
-                  borderRadius: 80
-                }} 
-                source={require('../../assets/userIc2.png')}
-              />
-            )}
-            <View style={{
-              position: 'absolute',
-              bottom: 5,
-              right: 5,
-              backgroundColor: '#4a90e2',
-              borderRadius: 15,
-              padding: 8,
-              elevation: 5,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-            }}>
-              <Ionicons name="camera" size={20} color="#fff" />
+            <TouchableOpacity 
+              onPress={pickImage}
+              style={{
+                height: 120,
+                width: 120,
+                borderRadius: 80,
+                backgroundColor: '#f0f0f0',
+                margin: 5,
+                marginLeft: 25,
+                marginTop: 15,
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {datUserParams?.imageUri ? (
+                <Image 
+                  style={{
+                    height: 120,
+                    width: 120,
+                    borderRadius: 80
+                  }} 
+                  source={{ uri: datUserParams.imageUri }}
+                />
+              ) : (
+                <Image 
+                  style={{
+                    height: 120,
+                    width: 120,
+                    borderRadius: 80
+                  }} 
+                  source={require('../../assets/userIc2.png')}
+                />
+              )}
+              <View style={{
+                position: 'absolute',
+                bottom: 5,
+                right: 5,
+                backgroundColor: '#4a90e2',
+                borderRadius: 15,
+                padding: 8,
+                elevation: 5,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+              }}>
+                <Ionicons name="camera" size={20} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            <View style={{marginTop:25}}>
+              <Text style={{fontSize:17,fontWeight:'900'}}>
+                {datUserParams?.name ? (datUserParams.name.length > 10 ? datUserParams.name.slice(0,10) + "..." : datUserParams.name) : "Sans nom"}
+              </Text>
+              <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.email || 'Email non défini'}</Text>
+              <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.departement || 'Département non défini'}</Text>
+              <Text style={{fontSize:15,color:'gray'}}>niveau : {datUserParams?.niveau || 'Non défini'}</Text>
+              <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.tel || 'Téléphone non défini'}</Text>
             </View>
           </TouchableOpacity>
-          <View style={{marginTop:25}}>
-            <Text style={{fontSize:17,fontWeight:'900'}}>
-              {datUserParams?.name ? (datUserParams.name.length > 10 ? datUserParams.name.slice(0,10) + "..." : datUserParams.name) : "Sans nom"}
-            </Text>
-            <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.email || 'Email non défini'}</Text>
-            <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.departement || 'Département non défini'}</Text>
-            <Text style={{fontSize:15,color:'gray'}}>niveau : {datUserParams?.niveau || 'Non défini'}</Text>
-            <Text style={{fontSize:15,color:'gray'}}>{datUserParams?.tel || 'Téléphone non défini'}</Text>
-          </View>
-        </TouchableOpacity>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Historique des consultations</Text>
+          {renderHistorique()}
+        </View>
+        {/** HISTORIQUE */}
+        <View style={{marginTop:5}}>
+          <View style={{height:5,width:WIDTH,backgroundColor:'#DCDCDC'}}></View>
+          <Text style={{fontSize:25,fontWeight:'900',textAlign:'center',marginTop:10}}>HISTORIQUES</Text>
+          <ScrollView horizontal style={{height:350}}>
+          {
+            datUserParams?.docRecent ? 
+              datUserParams.docRecent.map((dev,index)=>
+                <Carte dev={dev} key={index} />
+              )
+            : <Text style={{textAlign: 'center', marginTop: 20}}>Aucun historique disponible</Text>
+          }
+          </ScrollView>
+        </View>
+
+        <ImageBackground source={require('../../assets/bibi.jpg')}  style={{height:150,width:WIDTH}}></ImageBackground>
+        
+        <Modal animationType='slide'
+        transparent={false}
+        visible={modalCart}
+        onRequestClose={() => {
+          setModalCart(!modalCart)
+        }}
+        >
+          <SafeAreaView>
+          <Pressable onPress={()=>setModalCart(false)} style={{height:HEIGHT,backgroundColor:'rgba(255, 255, 255, 0.1)',alignContent:'center',padding:20}}>
+            <Image resizeMode='contain' style={{height:250,width:WIDTH,alignSelf:'center',marginTop:20}} source={{uri:imageCart}} />
+            <View style={{flexDirection:'row'}}>
+            <Text style={{fontSize:20,fontWeight:'300',margin:5}}>nom :</Text>
+            <Text style={{fontSize:20,fontWeight:'500',margin:5}}>{nameCart}</Text>
+            </View>
+
+            <View style={{flexDirection:'row',width:WIDTH*0.8,flexWrap:'wrap'}}>
+            <Text style={{fontSize:20,fontWeight:'300',margin:5}}>Description :</Text>
+            <Text style={{fontSize:15,fontWeight:'500',margin:5}}> {descCart} </Text>
+            </View>
+          </Pressable>
+          </SafeAreaView>
+        </Modal>
+
+        <View style={styles.container}>
+        
+        <Dialog.Container visible={visible}>
+          <Dialog.Title>Deconnexion</Dialog.Title>
+          <Dialog.Description>
+            Voulez-vous vraiment vous deconnecter ? 
+          </Dialog.Description>
+          <Dialog.Button label="non" onPress={handleCancel} />
+          <Dialog.Button label="oui" onPress={handleDelete} />
+        </Dialog.Container>
       </View>
-      {/** HISTORIQUE */}
-      <View style={{marginTop:5}}>
-        <View style={{height:5,width:WIDTH,backgroundColor:'#DCDCDC'}}></View>
-        <Text style={{fontSize:25,fontWeight:'900',textAlign:'center',marginTop:10}}>HISTORIQUES</Text>
-        <ScrollView horizontal style={{height:350}}>
-        {
-          datUserParams?.docRecent ? 
-            datUserParams.docRecent.map((dev,index)=>
-              <Carte dev={dev} key={index} />
-            )
-          : <Text style={{textAlign: 'center', marginTop: 20}}>Aucun historique disponible</Text>
-        }
-        </ScrollView>
-      </View>
-
-      <ImageBackground source={require('../../assets/bibi.jpg')}  style={{height:150,width:WIDTH}}></ImageBackground>
       
-      <Modal animationType='slide'
-      transparent={false}
-      visible={modalCart}
-      onRequestClose={() => {
-        setModalCart(!modalCart)
-      }}
-      >
-        <SafeAreaView>
-        <Pressable onPress={()=>setModalCart(false)} style={{height:HEIGHT,backgroundColor:'rgba(255, 255, 255, 0.1)',alignContent:'center',padding:20}}>
-          <Image resizeMode='contain' style={{height:250,width:WIDTH,alignSelf:'center',marginTop:20}} source={{uri:imageCart}} />
-          <View style={{flexDirection:'row'}}>
-          <Text style={{fontSize:20,fontWeight:'300',margin:5}}>nom :</Text>
-          <Text style={{fontSize:20,fontWeight:'500',margin:5}}>{nameCart}</Text>
-          </View>
-
-          <View style={{flexDirection:'row',width:WIDTH*0.8,flexWrap:'wrap'}}>
-          <Text style={{fontSize:20,fontWeight:'300',margin:5}}>Description :</Text>
-          <Text style={{fontSize:15,fontWeight:'500',margin:5}}> {descCart} </Text>
-          </View>
-        </Pressable>
-        </SafeAreaView>
-      </Modal>
-
-      <View style={styles.container}>
-      
-      <Dialog.Container visible={visible}>
-        <Dialog.Title>Deconnexion</Dialog.Title>
-        <Dialog.Description>
-          Voulez-vous vraiment vous deconnecter ? 
-        </Dialog.Description>
-        <Dialog.Button label="non" onPress={handleCancel} />
-        <Dialog.Button label="oui" onPress={handleDelete} />
-      </Dialog.Container>
-    </View>
-    
+      </ScrollView>
     </SafeAreaView>
-  </>
   )
 }
 
@@ -305,5 +362,49 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  historyItem: {
+    flexDirection: 'row',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#fff',
+  },
+  historyImage: {
+    width: 60,
+    height: 80,
+    borderRadius: 8,
+  },
+  historyInfo: {
+    flex: 1,
+    marginLeft: 10,
+    justifyContent: 'space-between',
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  historyCategory: {
+    fontSize: 14,
+    color: '#4B5563',
+  },
+  historyDate: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  emptyHistoryContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyHistoryText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    padding: 10,
   },
 })
