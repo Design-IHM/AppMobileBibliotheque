@@ -15,23 +15,25 @@ const firebaseConfig = {
   measurementId: "G-PWEJXF3Q4M"
 };
 
-// Initialize Firebase only if it hasn't been initialized yet
 let app;
 let auth;
 let db;
 let storage;
 
 try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
-} catch (error) {
-  if (error.code === 'auth/already-initialized') {
-    console.log('Firebase already initialized');
-  } else {
-    console.error('Firebase initialization error:', error);
+  // Vérifier si Firebase est déjà initialisé
+  if (!app) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
   }
+} catch (error) {
+  console.error("Error initializing Firebase:", error.message);
+  // Récupérer les instances existantes si déjà initialisées
+  auth = getAuth();
+  db = getFirestore();
+  storage = getStorage();
 }
 
-export { app, auth, db, storage };
+export { auth, db, storage };
