@@ -1,6 +1,5 @@
-import { View, Text, SafeAreaView, Image, Dimensions, TouchableOpacity, Modal, ScrollView, TextInput, StyleSheet, Button } from 'react-native'
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { NavigationContainer } from '@react-navigation/native'
+import { View, Text, SafeAreaView, Image, Dimensions, TouchableOpacity, FlatList, Modal, ScrollView, TextInput, StyleSheet, Button } from 'react-native'
+import React, { createContext, useState } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { auth, db } from '../../config'
@@ -70,6 +69,17 @@ const MainContainer = ({ navigation }) => {
   //firebase debut
   const [data, setData] = React.useState([]);
   const [loader, setLoader] = React.useState(true);
+
+  const recentSearches = [
+    "Mechanics",
+    "Thermodynamics",
+    "Electromagnetism",
+    "Statics",
+    "Dynamics",
+    "Fluid Mechanics",
+    "Control Systems",
+    "Material Science"
+  ];
 
   const getData = async () => {
     try {
@@ -286,36 +296,58 @@ const MainContainer = ({ navigation }) => {
         </Tab.Navigator>
 
         <Modal animationType='slide'
-          transparent={true}
+          transparent={false}
           visible={modal}
           onRequestClose={() => {
             setModal(!modal)
           }}
         > 
-        <SafeAreaView  style={{ margin: 5, flexDirection: 'row', height: HEIGHT, borderRadius: 20 }}>
-          <ScrollView style={{ backgroundColor: 'rgba(180,180,180,0.8)', borderRadius: 20 }}>
-            
-            <TouchableOpacity onPress={() => setModal(!modal)}>
-              <Image
-                style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', marginRight: 35, }}
-                source={require('../../assets/biblio/croix.png')}
-                resizeMode='cover'
-              />
-            </TouchableOpacity>
+          <SafeAreaView  style={{ margin: 5, flexDirection: 'row', height: HEIGHT, borderRadius: 20 }}>
+           <ScrollView style={{ backgroundColor: 'rgb(255,255,255)', borderRadius: 0 }}>
+
+             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 10, borderRadius: 20, margin: 5 }}>
+               {/* Back arrow */}
+               <TouchableOpacity
+                 onPress={() => setModal(!modal)}
+                 style={{ marginRight: 10 }}
+               >
+                 <Ionicons
+                   name="arrow-back"
+                   size={24}
+                   color="black"
+                 />
+               </TouchableOpacity>
+
+               {/* Search Input */}
+               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: 20, paddingHorizontal: 10 }}>
+                 <Ionicons name="search" size={20} color="gray" style={{ marginRight: 5 }} />
+                 <TextInput
+                   placeholder="Cherchez par million vos livres"
+                   style={{ flex: 1, height: 40 }}
+                   onChangeText={(text) => console.log(text)}
+                 />
+               </View>
+
+               {/* Search button */}
+               <TouchableOpacity onPress={() => console.log('Search pressed')} style={{ marginLeft: 10 }}>
+                 <Text style={{ color: 'gray', fontSize: 16, fontWeight: 'bold' }}>RECHERCHE</Text>
+               </TouchableOpacity>
+             </View>
 
 
-            <View style={styles.search}>
-              <TextInput
-                style={styles.input}
-                //  placeholderTextColor='pink'
-                placeholder='Cherchez par million vos livres'
-                onChangeText={SetValues}
-                value={values}
-              />
-              <View style={{}}>
-                <Button color='black' onPress={() => console.log(datUser1)} style={{ backgroundColor: 'white' }} title='recherche' />
-              </View>
-            </View>
+             <View style={{ padding: 10 }}>
+               {/* Title */}
+               <Text style={styles.title}>Recents</Text>
+
+               {/* Recent Searches */}
+               <View style={styles.searchContainer}>
+                 {recentSearches.map((item, index) => (
+                   <TouchableOpacity key={index} style={styles.searchItem}>
+                     <Text style={styles.searchText}>{item}</Text>
+                   </TouchableOpacity>
+                 ))}
+               </View>
+             </View>
             
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', margin: 7 }}>
 
@@ -345,38 +377,18 @@ const MainContainer = ({ navigation }) => {
                     }
                   } else return null;
                 }
-                /*
-                      (dev.name.includes(values) || dev.name.includes(values.toUpperCase()) ?
-                      <BigRect 
-                              type={dev.type} 
-                              datUser={datUser1} 
-                              cathegorie={dev.cathegorie} 
-                              props={navigation} 
-                              name={dev.name} 
-                              desc={dev.desc} 
-                              etagere={dev.etagere} 
-                              exemplaire={dev.exemplaire} 
-                              image={dev.image} 
-                              salle={dev.salle} 
-                              key={index} 
-                              commentaire={dev.commentaire} 
-                              nomBD={dev.nomBD} 
-                        />
-                      : <View key={index}></View>)
-              
-              */
-
               )          
             }
-
-
           </View>
-          <TouchableOpacity onPress={() => setModal(!modal)}>
-            <Text>F.E.D</Text>
-          </TouchableOpacity>
-        </ScrollView>
+
+          {/*<TouchableOpacity onPress={() => setModal(!modal)}>*/}
+          {/*  <Text>F.E.D</Text>*/}
+          {/*</TouchableOpacity>*/}
+
+           </ScrollView>
         </SafeAreaView>
       </Modal>
+
     </React.Fragment>
     </UserContexte.Provider>
   )
@@ -385,12 +397,6 @@ const MainContainer = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    //flexDirection:'row',
-    //  flexWrap:'wrap',
-    //  width:WIDTH,
-    //  height:HEIGHT ,
-    //  justifyContent:'space-between',
-    //  margin:5 
     flex: 1
 
   },
@@ -410,9 +416,29 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginTop: 15
   },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'gray',
+    marginBottom: 10
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: 10 // Ensures spacing between items
+  },
+  searchItem: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 10, // Optional for vertical spacing between items
+  },
+  searchText: {
+    color: 'black',
+    fontSize: 14
+  }
 })
-
-
-
 
 export default MainContainer;
