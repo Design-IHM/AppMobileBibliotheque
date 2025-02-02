@@ -11,32 +11,49 @@ const SmallRect = ({props,image,chemin,name}) => {
 
   return (
   <TouchableOpacity onPress={()=>voirPageWeb(chemin)} style={styles.contain}>
-  <ImageBackground style={styles.container} source={{uri:image}}>
-    <View style={{height:25,width:20,backgroundColor:'rgb(136,136,136)'}}>
-      <Text style={{fontSize:7,marginTop:'40%'}}>#new</Text>
+    <ImageBackground style={styles.container} source={{uri:image}}>
+      <View style={styles.newTag}>
+        <Text style={styles.newText}>#new</Text>
+      </View>
+    </ImageBackground>
+    <View style={styles.textContainer}>
+      <Text style={styles.nameText} numberOfLines={2} ellipsizeMode="tail">{name}</Text>
     </View>
-  </ImageBackground>
-  <View>
-    <Text style={{color:'rgb(136,136,136)', fontSize:17}}>{name}</Text>
-    <Text style={{color:'gray', fontSize:10,textDecorationLine: 'line-through', textDecorationStyle: 'solid'}}>9K fcfa</Text>
-  </View>
   </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
-  contain:{
-    height:170,
-    width:130,
-    marginTop:15,
-    marginLeft:10,
+  contain: {
+    height: 190,
+    width: 130,
+    marginTop: 15,
+    marginLeft: 10,
   },
-  container:{
-  //  backgroundColor:'red',
-   
-    height:150,
-    width:120,
-    
+  container: {
+    height: 150,
+    width: 120,
+  },
+  newTag: {
+    height: 25,
+    width: 20,
+    backgroundColor: 'rgb(136,136,136)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  newText: {
+    fontSize: 7,
+    color: '#fff',
+  },
+  textContainer: {
+    marginTop: 5,
+    width: 120,
+  },
+  nameText: {
+    color: 'rgb(136,136,136)',
+    fontSize: 15,
+    flexWrap: 'wrap',
+    lineHeight: 18,
   }
 })
 

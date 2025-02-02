@@ -13,8 +13,8 @@ import SmallRect from '../composants/SmallRect'
 import PageWeb from '../composants/PageWeb'
 import ModalWeb from '../composants/ModalWeb'
 import Email from '../composants/message/Email'
-import Commentaire from '../composants/achats/Commentaire'
 import ScreenVueUn from '../vues/ScreenVueUn'
+
 const screenOptions = {
     headerShown:false,  
 }
@@ -33,7 +33,6 @@ const NavShop = () => (
      <Stack.Screen name='PageWeb' component={PageWeb} />     
      <Stack.Screen name='ModalWeb' component={ModalWeb} />     
      <Stack.Screen name='Email' component={Email} />     
-     <Stack.Screen name='Commentaire' component={Commentaire} />     
     </Stack.Navigator>
 ) 
 

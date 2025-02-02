@@ -3,16 +3,23 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import NewNav from './components/navigation/NewNav';
 import { UserContextProvider } from './components/context/UserContext';
+import { FirebaseProvider } from './components/context/FirebaseContext';
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
     async function loadFonts() {
-      await Font.loadAsync({
-        'Georgia': require('./assets/fonts/Georgia.ttf'),  // Assurez-vous de fournir le bon chemin vers le fichier de la police
-      });
-      setFontsLoaded(true);
+      try {
+        await Font.loadAsync({
+          'Georgia': require('./assets/fonts/Georgia.ttf'),
+        });
+        setFontsLoaded(true);
+      } catch (error) {
+        console.error("Erreur lors du chargement des polices:", error);
+        // Continuer même si la police ne se charge pas
+        setFontsLoaded(true);
+      }
     }
     loadFonts();
   }, []);
@@ -26,9 +33,11 @@ export default function App() {
   }
 
   return (
-    <UserContextProvider>
-      <NewNav />
-    </UserContextProvider>
+    <FirebaseProvider>
+      <UserContextProvider>
+        <NewNav />
+      </UserContextProvider>
+    </FirebaseProvider>
   );
 }
 

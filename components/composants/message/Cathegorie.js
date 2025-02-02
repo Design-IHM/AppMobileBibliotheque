@@ -20,16 +20,22 @@ const Cathegorie = ({ route, navigation }) => {
     }
 
     try {
+      // Charger depuis BiblioInformatique par défaut
       const q = query(
         collection(db, "BiblioInformatique"),
         orderBy("name", "asc")
       );
 
+      console.log('Chargement des livres pour la catégorie:', cathegorie);
+
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const items = [];
         querySnapshot.forEach((doc) => {
-          items.push(doc.data());
+          const data = doc.data();
+          console.log('Livre trouvé:', data);
+          items.push(data);
         });
+        console.log(`${items.length} livres chargés au total`);
         setData(items);
         setLoader(false);
       }, (error) => {
@@ -60,6 +66,10 @@ const Cathegorie = ({ route, navigation }) => {
     );
   }
 
+  // Filtrer les livres par catégorie
+  const filteredData = data.filter(item => item.cathegorie === cathegorie);
+  console.log(`${filteredData.length} livres dans la catégorie ${cathegorie}`);
+
   return (
     <ScrollView>
       <View style={{
@@ -83,26 +93,22 @@ const Cathegorie = ({ route, navigation }) => {
         flexWrap: 'wrap',
         justifyContent: 'center'
       }}>
-        {data.map((item, index) => (
-          cathegorie === item.cathegorie ? (
-            <BigRect
-              key={index}
-              type={item.type}
-              datUser={currentUserdata}
-              cathegorie={item.cathegorie}
-              props={navigation}
-              name={item.name}
-              desc={item.desc}
-              etagere={item.etagere}
-              exemplaire={item.exemplaire}
-              image={item.image}
-              salle={item.salle}
-              commentaire={item.commentaire}
-              nomBD={item.nomBD}
-            />
-          ) : (
-            <View key={index} />
-          )
+        {filteredData.map((item, index) => (
+          <BigRect
+            key={index}
+            type={item.type}
+            datUser={currentUserdata}
+            cathegorie={item.cathegorie}
+            props={navigation}
+            name={item.name}
+            desc={item.desc}
+            etagere={item.etagere}
+            exemplaire={item.exemplaire}
+            image={item.image}
+            salle={item.salle}
+            commentaire={item.commentaire}
+            nomBD={item.nomBD}
+          />
         ))}
       </View>
     </ScrollView>

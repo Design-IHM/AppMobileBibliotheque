@@ -20,9 +20,7 @@ import PubCar from '../composants/PubCar'
 import PubRect from '../composants/PubRect'
 import SmallRect from '../composants/SmallRect'
 import { UserContext } from '../context/UserContext'
-
-// Utilisation de l'adresse IP correcte du serveur Flask
-const API_URL = 'http://172.20.10.2:5000';
+import { API_URL } from '../../apiConfig'
 
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
@@ -53,13 +51,49 @@ const VueUn = (props) => {
     }
   };
 
+  // Données de repli pour les recommandations
+  const fallbackRecommendations = [
+    {
+      id: '1',
+      title: 'Introduction à l\'Informatique',
+      category: 'Informatique',
+      description: 'Un livre complet sur les bases de l\'informatique',
+      image: 'https://example.com/image1.jpg'
+    },
+    {
+      id: '2',
+      title: 'Mathématiques pour l\'Ingénieur',
+      category: 'Mathématiques',
+      description: 'Concepts mathématiques essentiels pour les ingénieurs',
+      image: 'https://example.com/image2.jpg'
+    }
+  ];
+
+  const fallbackPopularBooks = [
+    {
+      id: '3',
+      title: 'Physique Moderne',
+      category: 'Physique',
+      description: 'Les fondements de la physique moderne',
+      image: 'https://example.com/image3.jpg'
+    },
+    {
+      id: '4',
+      title: 'Génie Civil: Principes Fondamentaux',
+      category: 'Génie Civil',
+      description: 'Introduction aux concepts du génie civil',
+      image: 'https://example.com/image4.jpg'
+    }
+  ];
+
   const fetchUserRecommendations = async (email) => {
     try {
       setLoadingRecommendations(true);
-      console.log('Tentative de connexion à:', `${API_URL}/recommendations/similar-users/${email}`);
+      const url = `${API_URL}/recommendations/similar-users/${encodeURIComponent(email)}`;
+      console.log('Tentative de connexion à:', url);
       
       const response = await fetchWithTimeout(
-        `${API_URL}/recommendations/similar-users/${email}`,
+        url,
         {
           method: 'GET',
           headers: {
@@ -71,24 +105,35 @@ const VueUn = (props) => {
       );
       
       console.log('Statut de la réponse:', response.status);
+      const responseText = await response.text();
+      console.log('Réponse brute:', responseText);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // En cas d'erreur 500, utiliser les données de repli
+        if (response.status === 500) {
+          console.log('Utilisation des recommandations de repli');
+          setUserRecommendations(fallbackRecommendations);
+          setSimilarUsers([]);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
       }
       
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       console.log('Données reçues:', data);
       
       if (data.recommendations) {
         setUserRecommendations(data.recommendations);
         setSimilarUsers(data.similar_users || []);
       } else {
-        setUserRecommendations([]);
+        console.log('Pas de recommendations dans la réponse, utilisation du repli');
+        setUserRecommendations(fallbackRecommendations);
         setSimilarUsers([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des recommandations:', error);
-      setUserRecommendations([]);
+      console.log('Utilisation des recommandations de repli après erreur');
+      setUserRecommendations(fallbackRecommendations);
       setSimilarUsers([]);
     } finally {
       setLoadingRecommendations(false);
@@ -97,10 +142,11 @@ const VueUn = (props) => {
 
   const fetchPopularBooks = async () => {
     try {
-      console.log('Tentative de connexion à:', `${API_URL}/recommendations/popular`);
+      const url = `${API_URL}/recommendations/popular`;
+      console.log('Tentative de connexion à:', url);
       
       const response = await fetchWithTimeout(
-        `${API_URL}/recommendations/popular`,
+        url,
         {
           method: 'GET',
           headers: {
@@ -112,22 +158,34 @@ const VueUn = (props) => {
       );
       
       console.log('Statut de la réponse (populaires):', response.status);
+      const responseText = await response.text();
+      console.log('Réponse brute (populaires):', responseText);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // En cas d'erreur 500, utiliser les données de repli
+        if (response.status === 500) {
+          console.log('Utilisation des livres populaires de repli');
+          setPopularBooks(fallbackPopularBooks);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
       }
       
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       console.log('Données populaires reçues:', data);
       
       if (data.popular_books) {
         setPopularBooks(data.popular_books);
+      } else if (data.books) {
+        setPopularBooks(data.books);
       } else {
-        setPopularBooks([]);
+        console.log('Pas de livres populaires dans la réponse, utilisation du repli');
+        setPopularBooks(fallbackPopularBooks);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des livres populaires:', error);
-      setPopularBooks([]);
+      console.log('Utilisation des livres populaires de repli après erreur');
+      setPopularBooks(fallbackPopularBooks);
     }
   };
 
@@ -222,10 +280,9 @@ const VueUn = (props) => {
                     type: book.type,
                     salle: book.salle || '',
                     etagere: book.etagere || '',
-                    exemplaire: book.exemplaire || 1,
-                    commentaire: book.commentaire || [],
-                    nomBD: 'BiblioLivre',
-                    datUser: datUser
+                    exemplaire: book.exemplaire || 0,
+                    nomBD: 'BiblioInformatique',
+                    commentaire: book.commentaire || []
                   })}
                 >
                   <Image
@@ -267,10 +324,9 @@ const VueUn = (props) => {
                     type: book.type,
                     salle: book.salle || '',
                     etagere: book.etagere || '',
-                    exemplaire: book.exemplaire || 1,
-                    commentaire: book.commentaire || [],
-                    nomBD: 'BiblioLivre',
-                    datUser: datUser
+                    exemplaire: book.exemplaire || 0,
+                    nomBD: 'BiblioInformatique',
+                    commentaire: book.commentaire || []
                   })}
                 >
                   <Image

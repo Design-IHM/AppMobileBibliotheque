@@ -5,6 +5,15 @@ import { ImageBackground, Modal, StyleSheet, Text, TouchableOpacity, View } from
 import { db } from '../../config'; 
 import { UserContextNavApp } from '../navigation/NavApp';
 
+// Fonction pour normaliser les chaînes (supprimer les accents)
+const normalizeString = (str) => {
+  if (!str) return ''; // Retourner une chaîne vide si str est undefined ou null
+  return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, " ")
+    .trim();
+};
+
 const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, datUser, commentaire, nomBD, type }) => {
   const navigation = useNavigation();  
   const { currentUserdata } = useContext(UserContextNavApp);
@@ -12,6 +21,14 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
   const [modalVisible, setModalVisible] = useState(false);
 
   const voirProduit = () => {
+    // S'assurer que name est défini avant de le normaliser
+    const normalizedName = name ? normalizeString(name) : '';
+    console.log('Navigation vers Produit:', {
+      name: name,
+      normalized: normalizedName,
+      cathegorie: cathegorie
+    });
+
     navigation.navigate('Produit', {
       salle,
       desc,
@@ -19,6 +36,7 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
       exemplaire,
       image,
       name,
+      normalizedName,
       cathegorie,
       datUser,
       commentaire,

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useContext } from 'react'
 import Dialog from "react-native-dialog"
 import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
+import { MaterialIcons } from '@expo/vector-icons'
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
 const Teb = ["","","",""]
@@ -202,20 +203,24 @@ export default function Parametre(props) {
               onPress={showDialog} 
               style={{
                 flexDirection: 'row',
-                marginRight: 15,
-                marginTop: 10,
-                alignItems: 'center'
+                alignItems: 'center',
+                paddingHorizontal: 15,
+                paddingVertical: 10,
+                position: 'absolute',
+                right: 10,
+                top: 10
               }}
             >
-              <Image 
-                source={require('../../assets/deconnect.png')} 
-                style={{height:20, width:20}} 
+              <MaterialIcons 
+                name="logout" 
+                size={28} 
+                color="#ff0000"
+                style={{marginRight: 5}}
               />
               <Text style={{
                 fontSize: 13,
                 fontWeight: '900',
-                color: '#000',
-                marginLeft: 2
+                color: '#000'
               }}>
                 Déconnexion
               </Text>
@@ -296,20 +301,6 @@ export default function Parametre(props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Historique des consultations</Text>
           {renderHistorique()}
-        </View>
-        {/** HISTORIQUE */}
-        <View style={{marginTop:5}}>
-          <View style={{height:5,width:WIDTH,backgroundColor:'#DCDCDC'}}></View>
-          <Text style={{fontSize:25,fontWeight:'900',textAlign:'center',marginTop:10}}>HISTORIQUES</Text>
-          <ScrollView horizontal style={{height:350}}>
-          {
-            datUserParams?.docRecent ? 
-              datUserParams.docRecent.map((dev,index)=>
-                <Carte dev={dev} key={index} />
-              )
-            : <Text style={{textAlign: 'center', marginTop: 20}}>Aucun historique disponible</Text>
-          }
-          </ScrollView>
         </View>
 
         <ImageBackground source={require('../../assets/bibi.jpg')}  style={{height:150,width:WIDTH}}></ImageBackground>

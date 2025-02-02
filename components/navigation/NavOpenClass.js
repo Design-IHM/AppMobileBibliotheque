@@ -17,6 +17,7 @@ import Cours2 from '../openclassroom/Cours2'
 import CoursInscrit2 from '../openclassroom/CoursInscrit2'
 import CoursInscrit3 from '../openclassroom/CoursInscrit3'
 import CoursInscrit4 from '../openclassroom/CoursInscrit4'
+import SimilarBooksView from '../vues/SimilarBooksView'
 
 const screenOptions = {
     headerShown:false,  

@@ -19,7 +19,9 @@ const ScreenVueUn = ({ navigation }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimating(false);
-      navigation.replace('VueUn');
+      navigation.navigate('VueUn', {
+        // Add any required params here
+      });
     }, 3000);
 
     return () => clearTimeout(timer);

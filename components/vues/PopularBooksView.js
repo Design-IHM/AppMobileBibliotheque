@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-
-const API_URL = 'http://127.0.0.1:5000';
+import { API_URL } from '../../apiConfig';
 
 export default function PopularBooksView({ navigation }) {
   const [popularBooks, setPopularBooks] = useState([]);

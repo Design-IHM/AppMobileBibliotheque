@@ -1,27 +1,28 @@
 import { useNavigation } from '@react-navigation/native';
-import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import { db } from '../../firebaseConfig'; // Assurez-vous que l'importation est correcte
+import { Dimensions, FlatList, SafeAreaView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import BigRect from './BigRect';
+import { API_URL } from '../../apiConfig';
 
 const WIDTH = Dimensions.get('window').width;
 
 const Recommend = () => {
   const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
-        const recommendationsArray = [];
-        const querySnapshot = await getDocs(collection(db, 'Recommendations'));
-        querySnapshot.forEach((doc) => {
-          recommendationsArray.push({ id: doc.id, ...doc.data() });
-        });
-        setRecommendations(recommendationsArray);
+        setLoading(true);
+        const response = await fetch(`${API_URL}/recommendations/popular`);
+        const data = await response.json();
+        setRecommendations(data.books || []);
       } catch (error) {
         console.error("Erreur lors de la récupération des recommandations :", error);
+        setRecommendations([]);
+      } finally {
+        setLoading(false);
       }
     };
     fetchRecommendations();
@@ -31,17 +32,31 @@ const Recommend = () => {
     <BigRect {...item} navigation={navigation} />
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  if (recommendations.length === 0) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text>Aucune recommandation disponible pour le moment</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Recommandations pour vous</Text>
-      </View>
       <FlatList
         data={recommendations}
         renderItem={renderBigRect}
-        keyExtractor={(item) => item.id}
-        numColumns={8}
-        contentContainerStyle={styles.gridContainer}
+        keyExtractor={(item) => item.id || Math.random().toString()}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
       />
     </SafeAreaView>
   );
@@ -52,22 +67,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F0F0',
   },
-  header: {
-    height: 50,
+  centered: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#DCDCDC',
-    width: WIDTH,
-    marginBottom: 10,
   },
-  headerText: {
-    textAlign: 'center',
-    fontWeight: '600',
-    fontFamily: 'Georgia',
-    fontSize: 20,
-  },
-  gridContainer: {
-    alignItems: 'center',
+  listContainer: {
+    paddingHorizontal: 10,
   },
 });
 

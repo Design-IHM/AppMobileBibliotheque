@@ -1,13 +1,14 @@
-import { View, Text, SafeAreaView, Image, Dimensions, TouchableOpacity, FlatList, Modal, ScrollView, TextInput, StyleSheet, Button } from 'react-native'
-import React, { createContext, useState } from 'react'
+import { View, Text, SafeAreaView, Image, Dimensions, TouchableOpacity, FlatList, Modal, ScrollView, TextInput, StyleSheet, Button, ActivityIndicator } from 'react-native'
+import React, { createContext, useState, useEffect } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { auth, db } from '../../config'
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, updateDoc, query, where, limit } from 'firebase/firestore'
 
-export const UserContexte = createContext()
-import { UserContext } from '../navigation/NewNav'
+export const UserContext = createContext()
+
 import { MessageContexte } from '../composants/message/Email'
+import SearchModal from '../composants/SearchModal';
 
 //Screens
 import VueUn from './VueUn'
@@ -37,9 +38,9 @@ import NavParams from '../navigation/NavParams'
 //import Email from '../composants/message/Email'
 // Screen names 
 const homeName = 'Home'
-const detailsName = 'setting'
-const settingsName = 'e-learning'
-const web = 'search'
+const detailsName = 'Settings'
+const settingsName = 'E-learning'
+const web = 'Search'
 
 //data.map
 
@@ -48,9 +49,34 @@ const HEIGHT = Dimensions.get('window').height
 const WIDTH = Dimensions.get('window').width
 
 
-const Tab = createBottomTabNavigator()
+const Tab = createBottomTabNavigator();
 
-const MainContainer = ({ navigation }) => {
+export const UserContexte = createContext();
+
+const MainContainer = ({ navigation, route }) => {
+  const screenOptions = ({ route }) => ({
+    tabBarIcon: ({ focused, color, size }) => {
+      let iconName;
+      switch (route.name) {
+        case 'Home':
+          iconName = focused ? 'home' : 'home-outline';
+          break;
+        case 'Messages':
+          iconName = focused ? 'mail' : 'mail-outline';
+          break;
+        case 'OpenClass':
+          iconName = focused ? 'school' : 'school-outline';
+          break;
+        case 'Shop':
+          iconName = focused ? 'cart' : 'cart-outline';
+          break;
+        default:
+          iconName = 'help-outline';
+      }
+      return <Ionicons name={iconName} size={size} color={color} />;
+    },
+  });
+
 
   // const {datUserTest, setDatUserTest,currentUserRecent, setCurrentUserRecent,datUser, setDatUser,currentUserNewNav}=useContext(UserContext)
 
@@ -58,28 +84,21 @@ const MainContainer = ({ navigation }) => {
 
   const voirMessage = () => {
     navigation.navigate('Panier', {})
+
+
   }
 
-  const [modal, setModal] = React.useState(false)
-  const [values, SetValues] = React.useState("")
-  const [datUser1, setDatUser1] = React.useState("")
-  const [VuePartCours, setPartVueCours] = useState("")
+  const [modal, setModal] = React.useState(false);
+  const [datUser1, setDatUser1] = React.useState(route.params?.datUser || null);
+  const [VuePartCours, setPartVueCours] = useState("");
+  const [signalMain, setSignalMain] = useState(false)
+  function lire() {
+    setSignalMain(true)
+    navigation.navigate('Email')
+  }
 
-
-  //firebase debut
   const [data, setData] = React.useState([]);
   const [loader, setLoader] = React.useState(true);
-
-  const recentSearches = [
-    "Mechanics",
-    "Thermodynamics",
-    "Electromagnetism",
-    "Statics",
-    "Dynamics",
-    "Fluid Mechanics",
-    "Control Systems",
-    "Material Science"
-  ];
 
   const getData = async () => {
     try {
@@ -115,15 +134,6 @@ const MainContainer = ({ navigation }) => {
     }
   };
 
-  //Signalmessage
-  // const {signale,setSignale}=useContext(MessageContexte)
-
-  const [signalMain, setSignalMain] = useState(false)
-  function lire() {
-    setSignalMain(true)
-    navigation.navigate('Email')
-  }
-
   return (
     <UserContexte.Provider value={{ VuePartCours, setPartVueCours, modal, setModal, signalMain, setSignalMain, datUser1 }}>
       <React.Fragment>
@@ -135,310 +145,166 @@ const MainContainer = ({ navigation }) => {
               let rn = route.name;
 
               if (rn === homeName) {
-                iconName = focused ? 'home' : 'home-outline'
+                iconName = focused ? 'home' : 'home-outline';
               } else if (rn === detailsName) {
-                //  iconName = focused ? 'book' : 'book-outline' 
-                iconName = focused ? 'cog' : 'cog'
+                iconName = focused ? 'cog' : 'cog-outline';
               } else if (rn === settingsName) {
-                iconName = focused ? 'list' : 'list-outline'
+                iconName = focused ? 'book' : 'book-outline';
+              } else if (rn === web) {
+                iconName = focused ? 'search' : 'search-outline';
               }
-              else if (rn === web) {
-                iconName = focused ? 'search' : 'search-outline'
-              }
-              return <Ionicons name={iconName} size={size} color={color} />
+              return <Ionicons name={iconName} size={size} color={color} />;
             },
             tabBarActiveTintColor: '#87CEEB',
             tabBarInactiveTintColor: 'gray',
-          })} 
+          })}
         >
-          { !signalMain ? 
-          <Tab.Screen
-            name={homeName}
-            component={NavShop}
-
-            screenOptions={({ route }) => ({
-              tabBarIcon: ({ focused, color, size }) => {
-                let iconName;
-                let rn = route.name;
-
-                if (rn === homeName) {
-                  iconName = focused ? 'cafe' : 'cafe-outline'
-                } else if (rn === detailsName) {
-                  //  iconName = focused ? 'list' : 'list-outline'
-                  iconName = focused ? 'cog' : 'cog'
-                } else if (rn === settingsName) {
-                  iconName = focused ? 'book' : 'book-outline'
-                } else if (rn === web) {
-                  //iconName = focused ? 'cart' : 'cart-outline'
-                  iconName = focused ? 'search' : 'search-outline'
-                }
-                return <Ionicons name={iconName} size={size} color={color} />
-              }
-            })} 
-
-
-            // title: 'App Name'
-            options={{ 
-              tabBarBadge: 1,
-              headerTitle: (props) => ( // App Logo
-                <SafeAreaView>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', position: 'relative', height: '100%', width: WIDTH, padding: 5 }}>
-                    <TouchableOpacity onPress={() => lire()}>
-                      <Image
-                        style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', marginRight: 35, }}
-                        source={require('../../assets/image/message2.jpg')}
-                        resizeMode='cover'
-                      />
-                    </TouchableOpacity>
-                    <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
-                      <Image style={{ height: 40, width: 40, borderRadius: 50, alignSelf: 'center', marginBottom: 5 }} source={require('../../assets/enspy.jpg')} />
-                      <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 25, fontFamily: 'Georgia', marginLeft: 5, marginRight: 15, }}>E N S P Y</Text>
+          {!signalMain ? (
+            <Tab.Screen
+              name={homeName}
+              component={NavShop}
+              options={{
+                headerTitle: (props) => (
+                  <SafeAreaView>
+                    <View style={styles.headerContainer}>
+                      <TouchableOpacity onPress={() => lire()}>
+                        <Image
+                          style={styles.messageIcon}
+                          source={require('../../assets/image/message2.jpg')}
+                          resizeMode='cover'
+                        />
+                      </TouchableOpacity>
+                      <View style={styles.logoContainer}>
+                        <Image 
+                          style={styles.logo} 
+                          source={require('../../assets/enspy.jpg')} 
+                        />
+                        <Text style={styles.title}>E N S P Y</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setModal(true)}>
+                        <Image
+                          style={styles.searchIcon}
+                          source={require('../../assets/image/search.png')}
+                          resizeMode='cover'
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
+                        <Image
+                          style={styles.cartIcon}
+                          source={require('../../assets/image/panier1.jpg')}
+                          resizeMode='cover'
+                        />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => setModal(!modal)}>
-                      <Image
-                        style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', resizeMode: 'center', opacity: 0.5 }}
-                        source={require('../../assets/image/search.png')}
-                        resizeMode='cover'
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={{ marginRight: 15, }} onPress={() => navigation.navigate('Panier')}>
-                      <Image
-                        style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', marginRight: 15, resizeMode: 'center', opacity: 0.5 }}
-                        source={require('../../assets/image/panier1.jpg')}
-                        resizeMode='cover'
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                </SafeAreaView>
-
-              ),
-              headerTitleStyle: { flex: 1, textAlign: 'center', },
-
-            }}
-          />  :  
-          <Tab.Screen
-            name={homeName}
-            component={NavShop}
-
-            screenOptions={({ route }) => ({
-              tabBarIcon: ({ focused, color, size }) => {
-                let iconName;
-                let rn = route.name;
-
-                if (rn === homeName) {
-                  iconName = focused ? 'cafe' : 'cafe-outline'
-                } else if (rn === detailsName) {
-                  iconName = focused ? 'list' : 'list-outline'
-                } else if (rn === settingsName) {
-                  iconName = focused ? 'book' : 'book-outline'
-                } else if (rn === web) {
-                  iconName = focused ? 'search' : 'search-outline'
-                }
-                return <Ionicons name={iconName} size={size} color={color} />
-              }
-            })} 
-
-
-            // title: 'App Name'
-            options={{ 
-              // tabBarBadge: 1,
-              headerTitle: (props) => ( // App Logo
-                <SafeAreaView>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', position: 'relative', height: '100%', width: WIDTH }}>
-                    <TouchableOpacity onPress={() => lire()}>
-                      <Image
-                        style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', marginRight: 35, }}
-                        source={require('../../assets/image/message2.jpg')}
-                        resizeMode='cover'
-                      />
-                    </TouchableOpacity>
-                    <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 25, fontFamily: 'Georgia', marginLeft: 55, marginRight: 25 }}>E N S P Y</Text>
-
-                    <TouchableOpacity onPress={() => setModal(!modal)}>
-                      <Image
-                        style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', resizeMode: 'center', opacity: 0.5 }}
-                        source={require('../../assets/image/search.png')}
-                        resizeMode='cover'
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
-                      <Image
-                        style={{ width: 35, height: 35, borderRadius: 50, position: 'relative', marginRight: 15, resizeMode: 'center', opacity: 0.5 }}
-                        source={require('../../assets/image/panier1.jpg')}
-                        resizeMode='cover'
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                </SafeAreaView>
-
-              ),
-              headerTitleStyle: { flex: 1, textAlign: 'center', },
-
-            }}
-          />
-          }
+                  </SafeAreaView>
+                ),
+                headerTitleStyle: { flex: 1, textAlign: 'center' },
+              }}
+            />
+          ) : (
+            <Tab.Screen
+              name={homeName}
+              component={NavShop}
+              options={{
+                headerTitle: (props) => (
+                  <SafeAreaView>
+                    <View style={styles.headerContainer}>
+                      <TouchableOpacity onPress={() => lire()}>
+                        <Image
+                          style={styles.messageIcon}
+                          source={require('../../assets/image/message2.jpg')}
+                          resizeMode='cover'
+                        />
+                      </TouchableOpacity>
+                      <View style={styles.logoContainer}>
+                        <Image 
+                          style={styles.logo} 
+                          source={require('../../assets/enspy.jpg')} 
+                        />
+                        <Text style={styles.title}>E N S P Y</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setModal(true)}>
+                        <Image
+                          style={styles.searchIcon}
+                          source={require('../../assets/image/search.png')}
+                          resizeMode='cover'
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
+                        <Image
+                          style={styles.cartIcon}
+                          source={require('../../assets/image/panier1.jpg')}
+                          resizeMode='cover'
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </SafeAreaView>
+                ),
+                headerTitleStyle: { flex: 1, textAlign: 'center' },
+              }}
+            />
+          )}
           <Tab.Screen name={settingsName} component={NavOpenClass} />
-          {/* <Tab.Screen name={homeName} component={Vue1} /> */}
-          <Tab.Screen name={web} component={PageWeb2}   />
+          <Tab.Screen name={web} component={PageWeb2} />
           <Tab.Screen name={detailsName} component={NavParams} />
-          {/*<Tab.Screen name={settingsName} component={PageWeb2}  />*/}
-          {/* !signalMain ? 
-          <Tab.Screen name={settingsName} component={PageWeb2}  />
-          : 
-          <Tab.Screen name={settingsName} component={PageWeb2}   />
-
-        */}
-
         </Tab.Navigator>
 
-        <Modal animationType='slide'
-          transparent={false}
-          visible={modal}
-          onRequestClose={() => {
-            setModal(!modal)
-          }}
-        > 
-          <SafeAreaView  style={{ margin: 5, flexDirection: 'row', height: HEIGHT, borderRadius: 20 }}>
-           <ScrollView style={{ backgroundColor: 'rgb(255,255,255)', borderRadius: 0 }}>
+        <SearchModal 
+          visible={modal} 
+          onClose={() => setModal(false)} 
+          navigation={navigation}
+        />
 
-             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 10, borderRadius: 20, margin: 5 }}>
-               {/* Back arrow */}
-               <TouchableOpacity
-                 onPress={() => setModal(!modal)}
-                 style={{ marginRight: 10 }}
-               >
-                 <Ionicons
-                   name="arrow-back"
-                   size={24}
-                   color="black"
-                 />
-               </TouchableOpacity>
-
-               {/* Search Input */}
-               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: 20, paddingHorizontal: 10 }}>
-                 <Ionicons name="search" size={20} color="gray" style={{ marginRight: 5 }} />
-                 <TextInput
-                   placeholder="Cherchez par million vos livres"
-                   style={{ flex: 1, height: 40 }}
-                   onChangeText={(text) => console.log(text)}
-                 />
-               </View>
-
-               {/* Search button */}
-               <TouchableOpacity onPress={() => console.log('Search pressed')} style={{ marginLeft: 10 }}>
-                 <Text style={{ color: 'gray', fontSize: 16, fontWeight: 'bold' }}>RECHERCHE</Text>
-               </TouchableOpacity>
-             </View>
-
-
-             <View style={{ padding: 10 }}>
-               {/* Title */}
-               <Text style={styles.title}>Recents</Text>
-
-               {/* Recent Searches */}
-               <View style={styles.searchContainer}>
-                 {recentSearches.map((item, index) => (
-                   <TouchableOpacity key={index} style={styles.searchItem}>
-                     <Text style={styles.searchText}>{item}</Text>
-                   </TouchableOpacity>
-                 ))}
-               </View>
-             </View>
-            
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', margin: 7 }}>
-
-              {
-                data.map((dev, index) => {
-                  if (dev && index.name && values) {
-                    if (dev.name.includes(values) || dev.name.includes(values.toUpperCase())) {
-                      return (
-                        <BigRect 
-                          type={dev.type} 
-                          datUser={datUser1} 
-                          cathegorie={dev.cathegorie} 
-                          props={navigation} 
-                          name={dev.name} 
-                          desc={dev.desc} 
-                          etagere={dev.etagere} 
-                          exemplaire={dev.exemplaire} 
-                          image={dev.image} 
-                          salle={dev.salle} 
-                          key={index} 
-                          commentaire={dev.commentaire} 
-                          nomBD={dev.nomBD} 
-                        />
-                      );
-                    } else {
-                      return <View key={index}></View>;
-                    }
-                  } else return null;
-                }
-              )          
-            }
-          </View>
-
-          {/*<TouchableOpacity onPress={() => setModal(!modal)}>*/}
-          {/*  <Text>F.E.D</Text>*/}
-          {/*</TouchableOpacity>*/}
-
-           </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-    </React.Fragment>
+      </React.Fragment>
     </UserContexte.Provider>
-  )
+  );
 }
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1
-
-  },
-  input: {
-    borderWidth: 1,
-    height: 40,
-    padding: 10,
-    width: 250,
-    borderBottomLeftRadius: 20,
-    borderTopLeftRadius: 20,
-    color: '#fff'  
-  },
-  search: {
+  headerContainer: {
     flexDirection: 'row',
-    alignContent: 'center',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    marginLeft: 10,
-    marginTop: 15
+    width: WIDTH,
+    padding: 5,
+  },
+  messageIcon: {
+    width: 35,
+    height: 35,
+    borderRadius: 50,
+    marginRight: 35,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    height: 40,
+    width: 40,
+    borderRadius: 50,
+    marginBottom: 5,
   },
   title: {
-    fontSize: 16,
+    color: '#000',
     fontWeight: 'bold',
-    color: 'gray',
-    marginBottom: 10
+    fontSize: 25,
+    fontFamily: 'Georgia',
+    marginLeft: 5,
+    marginRight: 15,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: 10 // Ensures spacing between items
+  searchIcon: {
+    width: 35,
+    height: 35,
+    borderRadius: 50,
+    opacity: 0.5,
   },
-  searchItem: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 10, // Optional for vertical spacing between items
+  cartIcon: {
+    width: 35,
+    height: 35,
+    borderRadius: 50,
+    marginRight: 15,
+    opacity: 0.5,
   },
-  searchText: {
-    color: 'black',
-    fontSize: 14
-  }
-})
+});
 
 export default MainContainer;
