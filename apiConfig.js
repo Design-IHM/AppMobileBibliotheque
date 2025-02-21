@@ -1,1 +1,1 @@
-export const API_URL = 'https://recommandation-api.up.railway.app';
+export const API_URL = 'https://recommendation.up.railway.app';
