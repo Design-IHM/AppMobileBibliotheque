@@ -1,9 +1,9 @@
-import { View, Text, SafeAreaView, TextInput, StyleSheet, ScrollView, Dimensions, Image, TouchableOpacity, StatusBar, ActivityIndicator, Animated, KeyboardAvoidingView, Platform } from 'react-native'
-import React, { useState, useEffect, useContext, createContext, useRef } from 'react'
-import { UserContext } from '../../context/UserContext'
+import { View, Text, SafeAreaView, TextInput, StyleSheet, ScrollView, Dimensions, Image, TouchableOpacity, StatusBar, ActivityIndicator, Animated, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useContext, createContext, useRef } from 'react';
+import { UserContext } from '../../context/UserContext';
 import { doc, updateDoc, arrayUnion, collection, Timestamp, onSnapshot, setDoc, getFirestore } from "firebase/firestore";
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
-import { onAuthStateChanged } from "firebase/auth"
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from '../../../config';
 import { getDoc, getDocs } from "firebase/firestore";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,23 +14,23 @@ import ChatBackground from './ChatBackground';
 
 const db = getFirestore();
 
-const HEIGHT = Dimensions.get('window').height
-const WIDTH = Dimensions.get('window').width
+const HEIGHT = Dimensions.get('window').height;
+const WIDTH = Dimensions.get('window').width;
 
 const MessageContexte = createContext({
   signale: true,
   setSignale: () => {}
-})
+});
 
 const Email = () => {
-  const {datUser, setDatUser, datUserTest, setDatUserTest} = useContext(UserContext)
-  const [currentUserEmail, setCurrentUserEmail] = useState('')
-  const [values, setValues] = useState("")
-  const [dat, setDat] = useState(0)
-  const [mes, setMes] = useState([])
-  const [data, setData] = useState([])
-  const [loader, setLoader] = useState(true)
-  const [signale, setSignale] = useState(true)
+  const { datUser, setDatUser, datUserTest, setDatUserTest } = useContext(UserContext);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [values, setValues] = useState("");
+  const [dat, setDat] = useState(0);
+  const [mes, setMes] = useState([]);
+  const [data, setData] = useState([]);
+  const [loader, setLoader] = useState(true);
+  const [signale, setSignale] = useState(true);
   const scrollViewRef = useRef();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,9 +44,9 @@ const Email = () => {
 
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => {
-      setCurrentUserEmail(currentUser)
-    })
-  }, [])
+      setCurrentUserEmail(currentUser);
+    });
+  }, []);
 
   useEffect(() => {
     setTimeout(() => {
@@ -106,7 +106,12 @@ const Email = () => {
     
     try {
       await updateDoc(washingtonRef, {
-        messages: arrayUnion({"recue":"E", "texte": values.trim(), "heure": dt})
+        messages: arrayUnion({
+          "recue": "E", 
+          "texte": values.trim(), 
+          "heure": dt,
+          "lu": false // Ajout du champ lu
+        })
       });
       await res();
       setValues("");
@@ -126,12 +131,13 @@ const Email = () => {
       await setDoc(docRef, {
         email: datUser.email,
         messages: values,
-        nom: datUser.email
+        nom: datUser.email,
+        lue: false
       });
     } catch (error) {
       console.error("Error in res:", error);
     }
-  }
+  };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp.seconds * 1000);
@@ -142,7 +148,7 @@ const Email = () => {
   };
 
   return (
-    <MessageContexte.Provider value={{signale, setSignale}}>
+    <MessageContexte.Provider value={{ signale, setSignale }}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
         <ChatBackground />
@@ -196,6 +202,7 @@ const Email = () => {
                         time={formatTime(dev.heure)}
                         isReceived={dev.recue === "R"}
                         isLast={index === datUser.messages.length - 1}
+                        isRead={dev.lu} // Passer le statut lu/non lu
                       />
                     ))
                   ) : (

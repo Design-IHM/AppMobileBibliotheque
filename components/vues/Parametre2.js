@@ -2,14 +2,15 @@ import { View, Text, Image, TouchableOpacity, Dimensions, TextInput, StyleSheet,
 import React, { useEffect, useState } from 'react'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import Ionicons from 'react-native-vector-icons/Ionicons';
-const WIDTH = Dimensions.get('screen').width
-const HEIGHT = Dimensions.get('screen').height
 import { db, storage } from '../../config'
 import * as ImagePicker from 'expo-image-picker'
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { doc, updateDoc } from "firebase/firestore"
 import { v4 } from "uuid"
 import Dialog from "react-native-dialog"
+
+const WIDTH = Dimensions.get('screen').width
+const HEIGHT = Dimensions.get('screen').height
 
 const Parametre2 = (props) => {
   const {imageM,nameM,emailM,telM,departM,niveauM}=props.route.params

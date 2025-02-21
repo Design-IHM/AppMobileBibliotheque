@@ -51,40 +51,6 @@ const VueUn = (props) => {
     }
   };
 
-  // Données de repli pour les recommandations
-  const fallbackRecommendations = [
-    {
-      id: '1',
-      title: 'Introduction à l\'Informatique',
-      category: 'Informatique',
-      description: 'Un livre complet sur les bases de l\'informatique',
-      image: 'https://example.com/image1.jpg'
-    },
-    {
-      id: '2',
-      title: 'Mathématiques pour l\'Ingénieur',
-      category: 'Mathématiques',
-      description: 'Concepts mathématiques essentiels pour les ingénieurs',
-      image: 'https://example.com/image2.jpg'
-    }
-  ];
-
-  const fallbackPopularBooks = [
-    {
-      id: '3',
-      title: 'Physique Moderne',
-      category: 'Physique',
-      description: 'Les fondements de la physique moderne',
-      image: 'https://example.com/image3.jpg'
-    },
-    {
-      id: '4',
-      title: 'Génie Civil: Principes Fondamentaux',
-      category: 'Génie Civil',
-      description: 'Introduction aux concepts du génie civil',
-      image: 'https://example.com/image4.jpg'
-    }
-  ];
 
   const fetchUserRecommendations = async (email) => {
     try {
@@ -126,14 +92,11 @@ const VueUn = (props) => {
         setUserRecommendations(data.recommendations);
         setSimilarUsers(data.similar_users || []);
       } else {
-        console.log('Pas de recommendations dans la réponse, utilisation du repli');
-        setUserRecommendations(fallbackRecommendations);
+        console.log('Pas de recommendations dans la réponse');
         setSimilarUsers([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des recommandations:', error);
-      console.log('Utilisation des recommandations de repli après erreur');
-      setUserRecommendations(fallbackRecommendations);
       setSimilarUsers([]);
     } finally {
       setLoadingRecommendations(false);
@@ -164,8 +127,6 @@ const VueUn = (props) => {
       if (!response.ok) {
         // En cas d'erreur 500, utiliser les données de repli
         if (response.status === 500) {
-          console.log('Utilisation des livres populaires de repli');
-          setPopularBooks(fallbackPopularBooks);
           return;
         }
         throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
@@ -184,8 +145,6 @@ const VueUn = (props) => {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des livres populaires:', error);
-      console.log('Utilisation des livres populaires de repli après erreur');
-      setPopularBooks(fallbackPopularBooks);
     }
   };
 

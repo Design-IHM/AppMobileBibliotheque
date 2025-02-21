@@ -57,7 +57,6 @@ async function initializePersistence() {
         }
       }
     }
-    
     isInitialized = true;
     console.log("Initialisation de Firebase terminée avec succès");
   } catch (error) {

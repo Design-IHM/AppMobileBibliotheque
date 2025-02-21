@@ -40,7 +40,7 @@ export default function PopularBooksView({ navigation }) {
         <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.bookAuthor}>{item.author}</Text>
         <View style={styles.statsContainer}>
-          <Text style={styles.borrowCount}>{item.borrowCount} emprunts</Text>
+          <Text style={styles.borrowCount}>{item.borrowCount} Emprunts</Text>
         </View>
       </View>
     </TouchableOpacity>

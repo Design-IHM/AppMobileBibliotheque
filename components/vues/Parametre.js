@@ -4,12 +4,13 @@ import Dialog from "react-native-dialog"
 import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
 import { MaterialIcons } from '@expo/vector-icons'
-const WIDTH = Dimensions.get('screen').width
-const HEIGHT = Dimensions.get('screen').height
-const Teb = ["","","",""]
 import { auth, db } from '../../config'
 import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { UserContext } from '../context/UserContext'
+
+const WIDTH = Dimensions.get('screen').width
+const HEIGHT = Dimensions.get('screen').height
+const Teb = ["","","",""]
 
 export default function Parametre(props) {
   const {currentUserNewNav} = useContext(UserContext)

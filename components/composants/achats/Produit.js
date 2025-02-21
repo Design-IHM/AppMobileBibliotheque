@@ -12,23 +12,6 @@ import PubRect from '../PubRect';
 const WIDTH = Dimensions.get('window').width;
 const HEIGHT = Dimensions.get('window').height;
 
-// Données de repli pour les recommandations
-const fallbackRecommendations = [
-  {
-    id: '1',
-    title: 'Introduction à l\'Informatique',
-    category: 'Informatique',
-    description: 'Un livre complet sur les bases de l\'informatique',
-    image: 'https://example.com/image1.jpg'
-  },
-  {
-    id: '2',
-    title: 'Mathématiques pour l\'Ingénieur',
-    category: 'Mathématiques',
-    description: 'Concepts mathématiques essentiels pour les ingénieurs',
-    image: 'https://example.com/image2.jpg'
-  }
-];
 
 // Fonction pour normaliser les chaînes (supprimer les accents)
 const normalizeString = (str) => {
@@ -569,13 +552,20 @@ const Produit = ({ route, navigation }) => {
 
     setLoadingSimilar(true);
     try {
-      const fallbackBooks = [
-        { name: "Introduction à l'informatique", cathegorie: "Informatique" },
-        { name: "Mathématiques pour l'ingénieur", cathegorie: "Mathématiques" }
-      ];
-      setSimilarBooks(fallbackBooks);
+      const response = await fetch(`${API_URL}/similarbooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: name }),
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la récupération des livres similaires.');
+
+      const data = await response.json();
+      setSimilarBooks(data.books || []);
     } catch (error) {
-      setSimilarBooks([]);
+      console.error('Erreur:', error);
     } finally {
       setLoadingSimilar(false);
     }
