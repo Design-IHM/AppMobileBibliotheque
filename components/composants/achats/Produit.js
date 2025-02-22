@@ -3,7 +3,7 @@ import Swiper from 'react-native-swiper';
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContextNavApp } from '../../navigation/NavApp';
 import { API_URL } from '../../../apiConfig';
-import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot, getDoc, query, getDocs, increment, writeBatch, setDoc } from "firebase/firestore";
+import { collection, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, Timestamp, onSnapshot, getDoc, query, getDocs, increment, writeBatch, setDoc, limit } from "firebase/firestore";
 import { useFirebase } from '../../context/FirebaseContext';
 import BigRect from '../BigRect';
 import PubCar from '../PubCar';
@@ -319,7 +319,7 @@ const Produit = ({ route, navigation }) => {
   // Fonction pour ajouter à l'historique
   useEffect(() => {
     const addToHistory = async () => {
-      if (!currentUserdata?.email || !isFirebaseReady || !db) return;
+      if (!currentUserdata?.email || !isFirebaseReady || !db || !name) return;
 
       try {
         const userRef = doc(db, "BiblioUser", currentUserdata.email);
@@ -337,21 +337,21 @@ const Produit = ({ route, navigation }) => {
           });
         }
 
-        const userData = userDoc.data();
+        const userData = userDoc.data() || {};
         const currentHistory = Array.isArray(userData.historique) ? userData.historique : [];
         
         const newHistoryItem = {
-          cathegorieDoc: cathegorie,
-          type: type || cathegorie, // Utiliser la catégorie comme type par défaut
+          cathegorieDoc: cathegorie || 'Non catégorisé',
+          type: type || cathegorie || 'Non catégorisé',
           image: image || null,
           nameDoc: name,
           desc: desc || '',
-          dateVue: dt
+          dateVue: Timestamp.now()
         };
 
         // Vérifier si l'élément existe déjà dans l'historique
         const exists = currentHistory.some(item => 
-          item.nameDoc === newHistoryItem.nameDoc && 
+          item && item.nameDoc === newHistoryItem.nameDoc && 
           item.cathegorieDoc === newHistoryItem.cathegorieDoc
         );
 
@@ -547,25 +547,83 @@ const Produit = ({ route, navigation }) => {
     })
   }
 
+  // Fonction pour calculer la similarité entre deux chaînes
+  const calculateSimilarity = (str1, str2) => {
+    if (!str1 || !str2) return 0;
+    const s1 = normalizeString(str1).split(' ').filter(Boolean);
+    const s2 = normalizeString(str2).split(' ').filter(Boolean);
+    
+    if (s1.length === 0 || s2.length === 0) return 0;
+    
+    // Compter les mots communs
+    const commonWords = s1.filter(word => s2.includes(word));
+    
+    // Calculer le score de similarité (0 à 1)
+    return commonWords.length / Math.max(s1.length, s2.length);
+  };
+
   const fetchSimilarBooks = async () => {
-    if (!name) return;
+    if (!name) {
+      console.log('Nom du livre manquant pour la recherche');
+      return;
+    }
 
     setLoadingSimilar(true);
+
     try {
-      const response = await fetch(`${API_URL}/similarbooks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: name }),
-      });
+      // Récupérer les livres de toutes les collections pertinentes
+      const collections = ['BiblioGE', 'BiblioGI', 'BiblioGM', 'BiblioGT', 'BiblioInformatique'];
+      let allBooks = [];
 
-      if (!response.ok) throw new Error('Erreur lors de la récupération des livres similaires.');
+      for (const collectionName of collections) {
+        try {
+          const booksRef = collection(db, collectionName);
+          const q = query(booksRef);
+          const querySnapshot = await getDocs(q);
+          
+          querySnapshot.forEach((doc) => {
+            const bookData = doc.data();
+            if (bookData && bookData.name && bookData.name !== name) {
+              allBooks.push({
+                id: doc.id,
+                title: bookData.name || '',
+                category: bookData.cathegorie || 'Non catégorisé',
+                image: bookData.image || null,
+                description: bookData.desc || '',
+                exemplaire: bookData.exemplaire || 0,
+                collection: collectionName
+              });
+            }
+          });
+        } catch (error) {
+          console.error(`Erreur lors de la lecture de ${collectionName}:`, error);
+        }
+      }
 
-      const data = await response.json();
-      setSimilarBooks(data.books || []);
+      // Calculer les scores de similarité pour chaque livre
+      const scoredBooks = allBooks.map(book => ({
+        ...book,
+        score: calculateSimilarity(name, book.title) * 0.6 + // Similarité du titre (60%)
+               (book.category === cathegorie ? 0.4 : 0) // Même catégorie (40%)
+      }));
+
+      // Trier par score et prendre les 5 meilleurs
+      const recommendations = scoredBooks
+        .sort((a, b) => b.score - a.score)
+        .filter(book => book.score > 0.1) // Garder uniquement les livres avec un score minimum
+        .slice(0, 5);
+
+      console.log('Livres similaires trouvés:', recommendations.length);
+      
+      setSimilarBooks(recommendations);
+      
+      if (recommendations.length === 0) {
+        console.log('Aucune recommandation trouvée pour:', name);
+      }
+
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('Erreur lors de la recherche de livres similaires:', error);
+      setSimilarBooks([]);
     } finally {
       setLoadingSimilar(false);
     }
@@ -835,8 +893,8 @@ const Produit = ({ route, navigation }) => {
                   key={index}
                   style={styles.similarBookCard}
                   onPress={() => navigation.navigate('Produit', {
-                    name: book.name,
-                    cathegorie: book.cathegorie,
+                    name: book.title,
+                    cathegorie: book.category,
                     image: book.image,
                     desc: book.desc,
                     exemplaire: book.exemplaire,
@@ -852,8 +910,8 @@ const Produit = ({ route, navigation }) => {
                     defaultSource={require('../../../assets/biblio/math.jpg')}
                   />
                   <View style={styles.similarBookInfo}>
-                    <Text style={styles.similarBookTitle} numberOfLines={2}>{book.name}</Text>
-                    <Text style={styles.similarBookCategory}>{book.cathegorie}</Text>
+                    <Text style={styles.similarBookTitle} numberOfLines={2}>{book.title}</Text>
+                    <Text style={styles.similarBookCategory}>{book.category}</Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1209,51 +1267,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
+  // ... (previous styles remain the same)
+
   similarBooksContainer: {
     backgroundColor: '#FFF',
     marginTop: 15,
     paddingVertical: 15,
+    paddingHorizontal: 15,
   },
   similarBooksHeader: {
-    paddingHorizontal: 15,
     marginBottom: 15,
   },
   similarBooksTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    fontFamily: 'Georgia',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
   },
   similarBookScroll: {
-    paddingBottom: 10
+    paddingBottom: 15,
   },
   similarBookCard: {
-    width: 150,
+    width: 160,
     marginRight: 15,
     backgroundColor: '#fff',
     borderRadius: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   similarBookImage: {
-    width: 150,
-    height: 200,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10
+    width: '100%',
+    height: 220,
+    resizeMode: 'cover',
   },
   similarBookInfo: {
-    padding: 10
+    padding: 12,
+    backgroundColor: '#fff',
   },
   similarBookTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 5
+    color: '#333',
+    marginBottom: 4,
+    lineHeight: 18,
   },
   similarBookCategory: {
-    fontSize: 12,
-    color: '#666'
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   noSimilarBooks: {
     textAlign: 'center',
@@ -1264,6 +1326,7 @@ const styles = StyleSheet.create({
   loader: {
     marginVertical: 20,
   },
+  
   reviewsContainer: {
     backgroundColor: '#fff',
     marginTop: 15,

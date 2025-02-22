@@ -69,7 +69,7 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
         />
       </TouchableOpacity>
       <View style={styles.infoContainer}>
-        <Text style={styles.name}>{name.length > 10 ? `${name.slice(0, 10)}...` : name}</Text>
+        <Text style={styles.name}>{name ? (name.length > 10 ? `${name.slice(0, 10)}...` : name) : ''}</Text>
         <Text style={styles.exemplaire}>{exemplaire} ex(s)</Text>
       </View>
       <Modal
