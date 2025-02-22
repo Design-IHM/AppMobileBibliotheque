@@ -179,7 +179,7 @@ const MainContainer = ({ navigation, route }) => {
                           style={styles.logo} 
                           source={require('../../assets/enspy.jpg')} 
                         />
-                        <Text style={styles.title}>E N S P Y</Text>
+                        <Text style={styles.title}>BIBLIO ENSPY</Text>
                       </View>
                       <TouchableOpacity onPress={() => setModal(true)}>
                         <Image
