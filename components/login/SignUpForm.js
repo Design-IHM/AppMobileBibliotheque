@@ -6,7 +6,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import * as ImagePicker from 'expo-image-picker';
 import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { auth, storage, db } from '../../firebaseConfig';
+import { auth, storage, db } from '../../config';
 import { UserContext } from '../context/UserContext';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -31,18 +31,6 @@ const SignUpForm = ({navigation}) => {
     username: Yup.string()
       .required('Username is required')
       .min(2, 'Username must be at least 2 characters'),
-    
-    matricule: Yup.string()
-      .required('Matricule is required')
-      .min(5, 'Matricule must be at least 2 characters'),
-
-    department: Yup.string()
-      .required('Department is required'),
-
-    phone: Yup.string()
-      .required('Phone is required')
-      .matches(/^[0-9]{9}$/, 'Phone must be a 9-digit number'),
-      
     password: Yup.string()
       .required('Password is required')
       .min(6, 'Password must be at least 6 characters')
@@ -396,15 +384,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   inputField: {
-    borderRadius: 4,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     backgroundColor: '#FAFAFA',
     marginBottom: 10,
-    borderWidth: 1,
     width: 350,
   },
   pickerContainer: {
-    borderRadius: 4,
+    borderRadius: 10,
     backgroundColor: '#FAFAFA',
     marginBottom: 10,
     borderWidth: 1,
@@ -415,11 +402,11 @@ const styles = StyleSheet.create({
     height: 50
   },
   button: isValid => ({
-    backgroundColor: isValid ? '#000' : '#ccc',
+    backgroundColor: isValid ? '#582900' : '#ccc',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 42,
-    borderRadius: 4,
+    borderRadius: 10,
     width: 250,
     alignSelf: 'center'
   }),

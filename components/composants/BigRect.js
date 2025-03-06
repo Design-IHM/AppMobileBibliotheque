@@ -61,31 +61,51 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
 
   return (
     <View style={styles.contain}>
-      <TouchableOpacity onPress={ajouter}>
-        <ImageBackground 
-          style={styles.container} 
-          source={{ uri: image }}
-          resizeMode="cover"
-        />
+      <TouchableOpacity onPress={ajouter} style={styles.bookCard}>
+        <View style={styles.imageWrapper}>
+          <ImageBackground 
+            style={styles.container} 
+            source={{ uri: image }}
+            resizeMode="cover"
+            imageStyle={styles.image}
+          />
+          {exemplaire < 3 && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>{exemplaire === 0 ? 'Indisponible' : 'Stock limité'}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.infoContainer}>
+          <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">
+            {name || ''}
+          </Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.category}>{cathegorie}</Text>
+            <Text style={styles.exemplaire}>{exemplaire} ex{exemplaire > 1 ? 's' : ''}</Text>
+          </View>
+        </View>
       </TouchableOpacity>
-      <View style={styles.infoContainer}>
-        <Text style={styles.name}>{name ? (name.length > 10 ? `${name.slice(0, 10)}...` : name) : ''}</Text>
-        <Text style={styles.exemplaire}>{exemplaire} ex(s)</Text>
-      </View>
+      
       <Modal
         animationType='slide'
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(!modalVisible)}
       >
-        <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={styles.modal}>
-          <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={styles.modalButton}>
-            <Text style={styles.modalText}>Pas intéressé</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={styles.modalButton}>
-            <Text style={styles.modalText}>Image inappropriée</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Signaler ce contenu</Text>
+            <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={styles.modalButton}>
+              <Text style={styles.modalText}>Pas intéressé</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={styles.modalButton}>
+              <Text style={styles.modalText}>Image inappropriée</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={[styles.modalButton, styles.cancelButton]}>
+              <Text style={styles.cancelText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -93,48 +113,116 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
 
 const styles = StyleSheet.create({
   contain: {
-    height: 150,
-    width: 100,
-    margin: 5,
-    borderRadius: 10,
+    width: 160,
+    margin: 8,
     overflow: 'hidden',
+  },
+  bookCard: {
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  imageWrapper: {
+    height: 220,
+    width: '100%',
+    position: 'relative',
   },
   container: {
     height: '100%',
     width: '100%',
   },
+  image: {
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 0,
+    backgroundColor: '#e74c3c',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   infoContainer: {
-    alignItems: 'center',
-    marginTop: 5,
+    padding: 10,
+    backgroundColor: '#fff',
   },
   name: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#333',
+    marginBottom: 5,
+    height: 40,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  category: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
   exemplaire: {
-    fontSize: 10,
-    color: '#555',
+    fontSize: 12,
+    color: '#3498db',
+    fontWeight: '600',
   },
-  modal: {
-    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-    borderRadius: 10,
-    height: 230,
-    width: 150,
-    flexDirection: 'column',
+  modalContainer: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
   },
   modalButton: {
-    backgroundColor: 'white',
-    width: '60%',
-    height: 35,
+    backgroundColor: '#f5f5f5',
+    width: '100%',
+    padding: 12,
     alignSelf: 'center',
-    marginVertical: 5,
+    marginVertical: 6,
     borderRadius: 10,
   },
   modalText: {
     textAlign: 'center',
+    fontSize: 14,
+    color: '#333',
+  },
+  cancelButton: {
+    backgroundColor: '#3498db',
     marginTop: 10,
+  },
+  cancelText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 

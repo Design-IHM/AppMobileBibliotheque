@@ -86,21 +86,42 @@ const Produit = ({ route, navigation }) => {
           signalMessage: 'ras',
           docRecent: [],
           searchHistory: [],
-          reservations: []
+          etat1:'ras',
+          etat2:'ras',
+          etat3:'ras',
+          tabEtat1:[],
+          tabEtat2:[],
+          tabEtat3:[]
         });
       }
 
       const userData = userDoc.data() || {};
       
       // Vérifier le nombre de réservations actives
-      const activeReservations = (userData.reservations || [])
-        .filter(res => res.etat === 'reserv')
-        .length;
+      const activeReservations = [
+        userData.etat1,
+        userData.etat2,
+        userData.etat3
+      ].filter(etat => etat === 'reserv').length;
 
       console.log('Nombre de réservations actives:', activeReservations);
 
       if (activeReservations >= 3) {
         Alert.alert('Information', 'Vous avez déjà 3 réservations actives. Veuillez attendre que certaines soient traitées avant d\'en faire de nouvelles.');
+        return;
+      }
+
+      //trouver un emplacement libre(etati et tabEtati)
+      let etatIndex = -1;
+      for (let i=1;i<=3;i++){
+        if(userData[`etat${i}`] === 'ras'){
+          etatIndex=i;
+          break;
+        }
+      }
+
+      if (etatIndex === -1) {
+        Alert.alert('Erreur', 'Aucun emplacement disponible pour une nouvelle réservation');
         return;
       }
 
@@ -136,15 +157,8 @@ const Produit = ({ route, navigation }) => {
 
               // Mettre à jour l'état de réservation de l'utilisateur
               const updateData = {
-                reservations: arrayUnion({
-                  name: name,                    // nom du livre
-                  cathegorie: cathegorie,        // catégorie
-                  image: image,                  // image
-                  exemplaire: bookData.exemplaire, // nombre d'exemplaires
-                  nomBD: collectionName,         // nom de la base de données
-                  dateReservation: Timestamp.now(), // date et heure de réservation
-                  etat: 'reserv'                 // état de la réservation
-                }),
+                [`etat${etatIndex}`]:'reserv',
+                [`tabEtat${etatIndex}`]:[name, cathegorie, image, bookData.exemplaire, collectionName, Timestamp.now()],
                 docRecent: arrayUnion({
                   cathegorieDoc: cathegorie,
                   type: type

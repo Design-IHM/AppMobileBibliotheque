@@ -87,10 +87,7 @@ const LoginForm = ({navigation}) => {
         });
 
         setEmailHigh(email);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainContainer' }],
-        });
+        navigation.navigate('MainContainer');
       } catch (error) {
         if (__DEV__) {
           console.error('Technical error:', error);
@@ -302,20 +299,20 @@ const styles = StyleSheet.create({
     alignSelf:'center',
   },
   inputField: {
-    borderRadius: 4,
-    padding: 12,
+    borderRadius: 20,
+    padding: 8,
     backgroundColor: '#FAFAFA',
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 1,
     width: 350,
   },
   button: isValid => ({
-    backgroundColor: isValid ? '#000' : '#ccc',
+    backgroundColor: isValid ? '#582900' : '#ccc',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 42,
-    borderRadius: 4,
-    width: 250,
+    borderRadius: 8,
+    width: 200,
     alignSelf: 'center'
   }),
   buttonText:{
@@ -330,13 +327,14 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: '#0096F6',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   signupContainer: {
     flexDirection: 'row',
     width: '100%',
+
     justifyContent: 'center',
-    marginTop: 50,
+    marginTop: 30,
   },
 })
 

@@ -11,9 +11,10 @@ const screenOptions = { headerShown:false }
 const NavParams = () => {
   return (
     <Stack.Navigator screenOptions={screenOptions} initialRouteName='Parametre'>
-    <Stack.Screen name='Parametre' component={Parametre} />
-    <Stack.Screen name='Parametre2' component={Parametre2} />
-</Stack.Navigator>
+      <Stack.Screen name='Parametre' component={Parametre} />
+      <Stack.Screen name='Parametre2' component={Parametre2} />
+
+    </Stack.Navigator>
   )
 }
 

@@ -1,59 +1,100 @@
-import { View, Text, StyleSheet, Image, ImageBackground,TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity } from 'react-native'
 import React from 'react'
 
-const SmallRect = ({props,image,chemin,name}) => {
-
+const SmallRect = ({props, image, chemin, name}) => {
   const voirPageWeb = (chemin) => {
-    props.navigation.navigate('PageWeb',{
-     chemin:chemin
-      
-    })} 
-
+    props.navigation.navigate('PageWeb', {
+      chemin: chemin
+    })
+  }
+  
   return (
-  <TouchableOpacity onPress={()=>voirPageWeb(chemin)} style={styles.contain}>
-    <ImageBackground style={styles.container} source={{uri:image}}>
-      <View style={styles.newTag}>
-        <Text style={styles.newText}>#new</Text>
+    <TouchableOpacity 
+      onPress={() => voirPageWeb(chemin)} 
+      style={styles.contain}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardContainer}>
+        <ImageBackground 
+          style={styles.container} 
+          source={{uri: image}}
+          imageStyle={styles.imageStyle}
+        >
+          <View style={styles.overlay} />
+          <View style={styles.newTag}>
+            <Text style={styles.newText}>#new</Text>
+          </View>
+        </ImageBackground>
       </View>
-    </ImageBackground>
-    <View style={styles.textContainer}>
-      <Text style={styles.nameText} numberOfLines={2} ellipsizeMode="tail">{name}</Text>
-    </View>
-  </TouchableOpacity>
+      <View style={styles.textContainer}>
+        <Text style={styles.nameText} numberOfLines={2} ellipsizeMode="tail">
+          {name}
+        </Text>
+      </View>
+    </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
   contain: {
-    height: 190,
-    width: 130,
-    marginTop: 15,
-    marginLeft: 10,
+    height: 210,
+    width: 140,
+    marginHorizontal: 8,
+    marginVertical: 10,
+  },
+  cardContainer: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   container: {
-    height: 150,
-    width: 120,
+    height: 160,
+    width: 140,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  imageStyle: {
+    borderRadius: 10,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 10,
   },
   newTag: {
-    height: 25,
-    width: 20,
-    backgroundColor: 'rgb(136,136,136)',
+    height: 26,
+    width: 50,
+    backgroundColor: '#3498db',
     justifyContent: 'center',
     alignItems: 'center',
+    borderTopLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   newText: {
-    fontSize: 7,
+    fontSize: 10,
+    fontWeight: 'bold',
     color: '#fff',
+    letterSpacing: 0.5,
   },
   textContainer: {
-    marginTop: 5,
-    width: 120,
+    marginTop: 10,
+    width: 140,
+    paddingHorizontal: 2,
   },
   nameText: {
-    color: 'rgb(136,136,136)',
-    fontSize: 15,
+    color: '#4a4a4a',
+    fontSize: 14,
     flexWrap: 'wrap',
     lineHeight: 18,
+    fontWeight: '600',
+    textAlign: 'center',
   }
 })
 
