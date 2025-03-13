@@ -68,7 +68,7 @@ const CathegorieBiblio1 = ({ cathegorie, currentUser, donnee }) => {
                     <ActivityIndicator size="large" color="#00ff00" />
                 ) : (
                     <View style={{ backgroundColor: '#C8C8C8', justifyContent: 'space-between', flexDirection: 'row' }}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'black', margin: 10, fontFamily: 'Cochin' }}>{cathegorie}</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'black', margin: 10, fontFamily: 'Roboto' }}>{cathegorie}</Text>
                     </View>
                 )}
             </ScrollView>
@@ -122,14 +122,14 @@ const Panier = (props) => {
                         <CathegorieBiblio donnee={dat} cathegorie='Reservation' />
                     ) : (
                         <View>
-                            <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 28, fontFamily: 'Cochin' }}>0 RESERVATION</Text>
+                            <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 28, fontFamily: 'Roboto' }}>0 RESERVATION</Text>
                         </View>
                     )}
                     {hasEmprunts(dat) ? (
                         <CathegorieBiblio1 donnee={dat} cathegorie='emprunt' currentUser={currentUserdata?.email} />
                     ) : (
                         <View>
-                            <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 28, fontFamily: 'Cochin', marginTop: 50 }}></Text>
+                            <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 28, fontFamily: 'Roboto', marginTop: 50 }}></Text>
                         </View>
                     )}
                 </View>
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: 'black',
-        fontFamily: 'Cochin'
+        fontFamily: 'Roboto'
     },
     reservationsContainer: {
         paddingHorizontal: 10

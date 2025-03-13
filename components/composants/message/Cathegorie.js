@@ -81,7 +81,7 @@ const Cathegorie = ({ route, navigation }) => {
         <Text style={{
           textAlign: 'center',
           fontWeight: '600',
-          fontFamily: 'Georgia',
+          fontFamily: 'San Francisco',
           marginTop: 10,
           fontSize: 20
         }}>

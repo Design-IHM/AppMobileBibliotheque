@@ -1,341 +1,552 @@
 import {
   signInWithEmailAndPassword,
   sendEmailVerification,
-  sendPasswordResetEmail
-} from "firebase/auth"
-import React, { useContext, useState } from 'react'
-import { Alert, Dimensions, ImageBackground as Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { auth, db } from '../../config'
-import { UserContext } from '../context/UserContext'
-import { Formik } from 'formik'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
-import * as Yup from 'yup'
-import { updateDoc, doc, Timestamp } from 'firebase/firestore'
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  TwitterAuthProvider,
+  signInWithCredential
+} from "firebase/auth";
+import React, { useContext, useState } from 'react';
+import {
+  Alert,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  ActivityIndicator
+} from 'react-native';
+import { auth, db } from '../../config';
+import { UserContext } from '../context/UserContext';
+import { Formik } from 'formik';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import * as Yup from 'yup';
+import { updateDoc, doc, Timestamp, setDoc, getDoc } from 'firebase/firestore';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
+import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome5';
 
-const WIDTH = Dimensions.get('window').width * 1;
-const HEIGHT = Dimensions.get('window').height*1
+
+
+const WIDTH = Dimensions.get('window').width;
+const HEIGHT = Dimensions.get('window').height;
+
+// Couleurs modernes
+const PRIMARY_COLOR = '#F16522';
+const SECONDARY_COLOR = '#FF8A50';
+const BG_COLOR = 'rgba(255, 255, 255, 0.92)';
+const TEXT_COLOR = '#333333';
+const LIGHT_GRAY = '#F9FAFB';
 
 const LoginForm = ({navigation}) => {
-  const {emailHigh,setEmailHigh} = useContext(UserContext)
+  const {emailHigh, setEmailHigh} = useContext(UserContext);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleForgotPassword = (email) => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email to reset your password');
+      Alert.alert('Information requise', 'Veuillez entrer votre email pour réinitialiser votre mot de passe');
       return;
     }
 
+    setIsLoading(true);
     sendPasswordResetEmail(auth, email)
-      .then(() => {
-        Alert.alert(
-          'Email Sent',
-          'A password reset email has been sent to your address.',
-          [{ text: 'OK' }]
-        );
-      })
-      .catch((error) => {
-        if (__DEV__) {
-          console.error('Error sending password reset email:', error);
-        }
-        if (error.code === 'auth/user-not-found') {
-          Alert.alert('Error', 'No account exists with this email');
-        } else {
-          Alert.alert('Error', 'Failed to send reset email. Please try again');
-        }
-      });
+        .then(() => {
+          setIsLoading(false);
+          Alert.alert(
+              'Email Envoyé',
+              'Un email de réinitialisation de mot de passe a été envoyé à votre adresse.',
+              [{ text: 'OK' }]
+          );
+        })
+        .catch((error) => {
+          setIsLoading(false);
+          if (__DEV__) {
+            console.error('Erreur d\'envoi d\'email de réinitialisation:', error);
+          }
+          if (error.code === 'auth/user-not-found') {
+            Alert.alert('Compte introuvable', 'Aucun compte n\'existe avec cet email');
+          } else {
+            Alert.alert('Échec', 'Échec de l\'envoi de l\'email. Veuillez réessayer');
+          }
+        });
+  };
+
+  // Méthode simplifiée pour la connexion sociale
+  const handleSocialLogin = async (provider) => {
+    Alert.alert(
+        "Connexion externe",
+        "Pour vous connecter avec ce service, l'application doit ouvrir votre navigateur. Continuer?",
+        [
+          {
+            text: "Annuler",
+            style: "cancel"
+          },
+          {
+            text: "Continuer",
+            onPress: () => {
+              Alert.alert(
+                  "Information",
+                  "Cette fonctionnalité nécessite une configuration supplémentaire côté serveur. Veuillez utiliser la connexion par email pour le moment."
+              );
+              // Ici, vous implémenteriez la redirection vers le flux OAuth
+              // Cette partie nécessiterait react-native-app-auth ou une solution similaire
+            }
+          }
+        ]
+    );
   };
 
   const LoginFormSchema = Yup.object().shape({
-    email: Yup.string().email('Please enter a valid email').required('Email is required'),
+    email: Yup.string()
+        .email('Veuillez entrer un email valide')
+        .required('Email requis'),
     password: Yup.string()
-      .required('Password is required')
-      .min(6, 'Password must be at least 6 characters'),
-  })
+        .required('Mot de passe requis')
+        .min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
+  });
 
   const onLogin = async (values) => {
     try {
+      setIsLoading(true);
       const { email, password } = values;
-      
+
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         // Vérifier si l'email est vérifié
         if (!user.emailVerified) {
+          setIsLoading(false);
           Alert.alert(
-            'Email Not Verified',
-            'Please verify your email before logging in. Would you like to receive a new verification email?',
-            [
-              {
-                text: 'Resend',
-                onPress: async () => {
-                  await sendEmailVerification(user);
-                  Alert.alert('Email Sent', 'Please check your inbox');
+              'Validation requise',
+              'Veuillez vérifier votre email avant de vous connecter',
+              [
+                {
+                  text: 'Renvoyer l\'email',
+                  onPress: async () => {
+                    await sendEmailVerification(user);
+                    Alert.alert('Email envoyé', 'Veuillez vérifier votre boîte de réception');
+                  },
                 },
-              },
-              {
-                text: 'Cancel',
-                style: 'cancel',
-              },
-            ]
+                {
+                  text: 'Fermer',
+                  style: 'cancel',
+                },
+              ]
           );
           return;
         }
 
-        // Update last login in Firestore
-        await updateDoc(doc(db, 'BiblioUser', email), {
-          lastLoginAt: Timestamp.now()
-        });
+        // Vérifier si l'utilisateur existe dans Firestore
+        const userDocRef = doc(db, 'BiblioUser', email);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          // Mettre à jour les informations de connexion
+          await updateDoc(userDocRef, {
+            lastLoginAt: Timestamp.now()
+          });
+        } else {
+          // Créer un document utilisateur s'il n'existe pas
+          await setDoc(userDocRef, {
+            email: email,
+            createdAt: Timestamp.now(),
+            lastLoginAt: Timestamp.now()
+          });
+        }
 
         setEmailHigh(email);
+        setIsLoading(false);
         navigation.navigate('MainContainer');
       } catch (error) {
+        setIsLoading(false);
         if (__DEV__) {
-          console.error('Technical error:', error);
+          console.error('Erreur technique:', error);
         }
 
         switch (error.code) {
           case 'auth/wrong-password':
             Alert.alert(
-              'Login Failed',
-              'Incorrect password. Would you like to reset it?',
-              [
-                {
-                  text: 'Reset Password',
-                  onPress: () => handleForgotPassword(values.email),
-                },
-                {
-                  text: 'Try Again',
-                  style: 'cancel',
-                },
-              ]
+                'Mot de passe incorrect',
+                'Vous avez saisi un mot de passe incorrect',
+                [
+                  {
+                    text: 'Réinitialiser',
+                    onPress: () => handleForgotPassword(values.email),
+                  },
+                  {
+                    text: 'Réessayer',
+                    style: 'cancel',
+                  },
+                ]
             );
             break;
           case 'auth/user-not-found':
             Alert.alert(
-              'Account Not Found',
-              'No account exists with this email.',
-              [
-                {
-                  text: 'Sign Up',
-                  onPress: () => navigation.navigate('SignUpScreen'),
-                },
-                {
-                  text: 'Try Again',
-                  style: 'cancel',
-                },
-              ]
+                'Compte introuvable',
+                'Aucun utilisateur avec cet email n\'existe dans notre système',
+                [
+                  {
+                    text: 'Créer un compte',
+                    onPress: () => navigation.navigate('SignUpScreen'),
+                  },
+                  {
+                    text: 'Réessayer',
+                    style: 'cancel',
+                  },
+                ]
             );
             break;
           case 'auth/too-many-requests':
             Alert.alert(
-              'Too Many Attempts',
-              'Please try again later or reset your password.'
+                'Trop de tentatives',
+                'Votre compte a été temporairement désactivé en raison de nombreuses tentatives de connexion. Veuillez réessayer plus tard ou réinitialiser votre mot de passe.'
             );
             break;
           case 'auth/network-request-failed':
             Alert.alert(
-              'Connection Error',
-              'Please check your internet connection and try again.'
+                'Problème de connexion',
+                'Veuillez vérifier votre connexion internet et réessayer.'
             );
             break;
           default:
             Alert.alert(
-              'Login Failed',
-              'Please check your credentials and try again.'
+                'Échec de connexion',
+                'Veuillez vérifier vos identifiants et réessayer.'
             );
         }
       }
     } catch (error) {
+      setIsLoading(false);
       if (__DEV__) {
-        console.error('Technical error:', error);
+        console.error('Erreur technique:', error);
       }
-
-      switch (error.code) {
-        case 'auth/wrong-password':
-          Alert.alert(
-            'Login Failed',
-            'Incorrect password. Would you like to reset it?',
-            [
-              {
-                text: 'Reset Password',
-                onPress: () => handleForgotPassword(values.email),
-              },
-              {
-                text: 'Try Again',
-                style: 'cancel',
-              },
-            ]
-          );
-          break;
-        case 'auth/user-not-found':
-          Alert.alert(
-            'Account Not Found',
-            'No account exists with this email.',
-            [
-              {
-                text: 'Sign Up',
-                onPress: () => navigation.navigate('SignUpScreen'),
-              },
-              {
-                text: 'Try Again',
-                style: 'cancel',
-              },
-            ]
-          );
-          break;
-        case 'auth/too-many-requests':
-          Alert.alert(
-            'Too Many Attempts',
-            'Please try again later or reset your password.'
-          );
-          break;
-        case 'auth/network-request-failed':
-          Alert.alert(
-            'Connection Error',
-            'Please check your internet connection and try again.'
-          );
-          break;
-        default:
-          Alert.alert(
-            'Login Failed',
-            'Please check your credentials and try again.'
-          );
-      }
+      Alert.alert(
+          'Erreur',
+          'Une erreur s\'est produite lors de la connexion. Veuillez réessayer.'
+      );
     }
   };
 
   return (
-    <KeyboardAwareScrollView>
-      <Image style={{flex:1, height:HEIGHT}} source={require('../../assets/biblio1.jpg')}>
-        <View style={styles.wrapper}>
-          <Formik
-            initialValues={{ email: '', password: '' }}
-            onSubmit={values => onLogin(values)}
-            validationSchema={LoginFormSchema}
-            validateOnMount={true}
-          >
-            {({ handleChange, handleBlur, handleSubmit, values, isValid, errors, touched }) => (
-              <>
-                <View style={[
-                  styles.inputField,
-                  {
-                    borderColor:
-                      values.email.length < 1 || Yup.string().email().isValidSync(values.email)
-                        ? '#ccc'
-                        : 'red',
-                  },
-                ]}>
-                  <TextInput
-                    placeholderTextColor='#444'
-                    placeholder='email'
-                    autoCapitalize='none'
-                    keyboardType='email-address'
-                    textContentType='emailAddress'
-                    autoFocus={true}
-                    onChangeText={handleChange('email')}
-                    onBlur={handleBlur('email')}
-                    value={values.email}
-                  />
-                </View>
+      <LinearGradient
+          colors={['rgba(241, 101, 34, 0.15)', 'rgba(255, 255, 255, 0.9)']}
+          style={styles.container}
+      >
+        <KeyboardAwareScrollView contentContainerStyle={styles.scrollView}>
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.formContainer}>
+              <Text style={styles.title}>Bienvenue</Text>
+              <Text style={styles.subtitle}>Connectez-vous pour accéder à la bibliothèque</Text>
 
-                <View style={[
-                  styles.inputField,
-                  {
-                    borderColor:
-                      6 > values.password.length || values.password.length >= 6
-                        ? '#ccc'
-                        : 'red',
-                  },
-                ]}>
-                  <TextInput
-                    placeholderTextColor='#444'
-                    placeholder='password'
-                    autoCapitalize='none'
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    textContentType='password'
-                    onChangeText={handleChange('password')}
-                    onBlur={handleBlur('password')}
-                    value={values.password}
-                  />
-                </View>
+              <Formik
+                  initialValues={{ email: '', password: '' }}
+                  onSubmit={values => onLogin(values)}
+                  validationSchema={LoginFormSchema}
+                  validateOnMount={true}
+              >
+                {({ handleChange, handleBlur, handleSubmit, values, isValid, errors, touched }) => (
+                    <View style={styles.form}>
+                      <View style={styles.inputContainer}>
+                        <MaterialIcon name="email" size={20} color="#777" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholderTextColor="#777"
+                            placeholder="Email"
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            textContentType="emailAddress"
+                            onChangeText={handleChange('email')}
+                            onBlur={handleBlur('email')}
+                            value={values.email}
+                        />
+                      </View>
+                      {touched.email && errors.email && (
+                          <Text style={styles.errorText}>{errors.email}</Text>
+                      )}
 
-                <TouchableOpacity
-                  style={styles.button(isValid)}
-                  onPress={handleSubmit}
-                  disabled={!isValid}
-                >
-                  <Text style={styles.buttonText}>Log In</Text>
-                </TouchableOpacity>
+                      <View style={styles.inputContainer}>
+                        <MaterialIcon name="lock" size={20} color="#777" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholderTextColor="#777"
+                            placeholder="Mot de passe"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            secureTextEntry={!showPassword}
+                            textContentType="password"
+                            onChangeText={handleChange('password')}
+                            onBlur={handleBlur('password')}
+                            value={values.password}
+                        />
+                        <TouchableOpacity
+                            onPress={() => setShowPassword(!showPassword)}
+                            style={styles.showPasswordButton}
+                        >
+                          <MaterialIcon name={showPassword ? "visibility-off" : "visibility"} size={20} color="#777" />
+                        </TouchableOpacity>
+                      </View>
+                      {touched.password && errors.password && (
+                          <Text style={styles.errorText}>{errors.password}</Text>
+                      )}
 
-                <TouchableOpacity
-                  style={styles.forgotPasswordButton}
-                  onPress={() => handleForgotPassword(values.email)}
-                >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
+                      <TouchableOpacity
+                          style={[styles.forgotPasswordButton]}
+                          onPress={() => handleForgotPassword(values.email)}
+                      >
+                        <Text style={styles.forgotPasswordText}>Mot de passe oublié?</Text>
+                      </TouchableOpacity>
 
-                <View style={styles.signupContainer}>
-                  <Text>New to ingy? </Text>
-                  <TouchableOpacity onPress={() => navigation.push('SignUpScreen')}>
-                    <Text style={{ color: '#FA8072' }}>Sign Up</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </Formik>
-        </View>
-      </Image>
-    </KeyboardAwareScrollView>
-  )
-}
+                      <TouchableOpacity
+                          style={[
+                            styles.button,
+                            !isValid && styles.buttonDisabled,
+                            isValid && styles.buttonEnabled
+                          ]}
+                          onPress={handleSubmit}
+                          disabled={!isValid || isLoading}
+                      >
+                        {isLoading ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                            <Text style={styles.buttonText}>Se connecter</Text>
+                        )}
+                      </TouchableOpacity>
+
+                      <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>ou</Text>
+                        <View style={styles.dividerLine} />
+                      </View>
+
+                      <View style={styles.socialIconsContainer}>
+                        <TouchableOpacity
+                            style={styles.socialIconButton}
+                            onPress={() => handleSocialLogin('google')}
+                        >
+                          <LinearGradient
+                              colors={['#DB4437', '#EA4335']}
+                              style={styles.socialIconGradient}
+                          >
+                            <FontAwesomeIcon name="google" size={22} color="#FFFFFF" />
+                          </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.socialIconButton}
+                            onPress={() => handleSocialLogin('facebook')}
+                        >
+                          <LinearGradient
+                              colors={['#4267B2', '#3B5998']}
+                              style={styles.socialIconGradient}
+                          >
+                            <FontAwesomeIcon name="facebook" size={22} color="#FFFFFF" />
+                          </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.socialIconButton}
+                            onPress={() => handleSocialLogin('twitter')}
+                        >
+                          <LinearGradient
+                              colors={['#1DA1F2', '#0084B4']}
+                              style={styles.socialIconGradient}
+                          >
+                            <FontAwesomeIcon name="twitter" size={22} color="#FFFFFF" />
+                          </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.socialIconButton}
+                            onPress={() => handleSocialLogin('instagram')}
+                        >
+                          <LinearGradient
+                              colors={['#C13584', '#E1306C']}
+                              style={styles.socialIconGradient}
+                          >
+                            <FontAwesomeIcon name="instagram" size={22} color="#FFFFFF" />
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.signupContainer}>
+                        <Text style={styles.signupText}>Nouveau sur la plateforme? </Text>
+                        <TouchableOpacity onPress={() => navigation.push('SignUpScreen')}>
+                          <Text style={styles.signupLink}>Créer un compte</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                )}
+              </Formik>
+            </View>
+          </SafeAreaView>
+        </KeyboardAwareScrollView>
+      </LinearGradient>
+  );
+};
 
 const styles = StyleSheet.create({
-  wrapper:{
-    marginTop:200,
-    marginHorizontal:10,
-    height:HEIGHT,
-    alignContent:'center',
-    alignSelf:'center',
+  container: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
-  inputField: {
-    borderRadius: 20,
-    padding: 8,
-    backgroundColor: '#FAFAFA',
-    marginBottom: 8,
-    borderWidth: 1,
-    width: 350,
+  scrollView: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
-  button: isValid => ({
-    backgroundColor: isValid ? '#582900' : '#ccc',
+  safeArea: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 42,
-    borderRadius: 8,
-    width: 200,
-    alignSelf: 'center'
-  }),
-  buttonText:{
-    fontWeight:'600',
-    color:'#fff',
-    fontSize:20,
+    paddingHorizontal: 16,
+    paddingVertical: 30,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: BG_COLOR,
+    borderRadius: 20,
+    padding: 28,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: TEXT_COLOR,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  form: {
+    width: '100%',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: LIGHT_GRAY,
+    height: 56,
+  },
+  inputIcon: {
+    paddingLeft: 16,
+  },
+  input: {
+    flex: 1,
+    color: TEXT_COLOR,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginBottom: 12,
+    marginTop: -8,
+    paddingLeft: 4,
+  },
+  button: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    height: 56,
+    justifyContent: 'center',
+  },
+  buttonEnabled: {
+    backgroundColor: PRIMARY_COLOR,
+  },
+  buttonDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  showPasswordButton: {
+    paddingRight: 16,
   },
   forgotPasswordButton: {
-    alignItems: 'center',
-    marginTop: 15,
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+    paddingVertical: 4,
   },
   forgotPasswordText: {
-    color: '#0096F6',
+    color: PRIMARY_COLOR,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 28,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    color: '#777',
+    paddingHorizontal: 16,
+    fontSize: 14,
+  },
+  socialIconsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 32,
+    gap: 16,
+  },
+  socialIconButton: {
+    borderRadius: 50,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  socialIconGradient: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   signupContainer: {
     flexDirection: 'row',
-    width: '100%',
-
     justifyContent: 'center',
-    marginTop: 30,
+    marginTop: 8,
   },
-})
+  signupText: {
+    color: '#777',
+  },
+  signupLink: {
+    color: PRIMARY_COLOR,
+    fontWeight: '600',
+  },
+});
 
-export default LoginForm
+export default LoginForm;

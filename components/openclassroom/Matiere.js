@@ -149,7 +149,7 @@ const Matiere = (props) => {
       </View>
 
       <View style={{ margin: 5, marginTop: 30 }}>
-        <Text style={{ fontFamily: 'Georgia', color: 'rgba(32,32,32,0.5)', marginLeft: 25 }}>
+        <Text style={{ fontFamily: 'San Francisco', color: 'rgba(32,32,32,0.5)', marginLeft: 25 }}>
           {nomDepartement || 'Département non spécifié'}
         </Text>
         <View style={{ flexDirection: 'row', paddingTop: 25, paddingLeft: 22 }}>

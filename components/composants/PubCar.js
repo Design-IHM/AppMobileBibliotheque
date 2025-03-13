@@ -7,8 +7,8 @@ const WIDTH = Dimensions.get('window').width
 const PubCar = () => {
   return (
     <View style={styles.container}>
-      <ImageBackground style={{height:'100%', width:200,}} source={require('../../assets/biblio/biblio1.jpg')}></ImageBackground>
-      <ImageBackground style={{height:'100%', width:200}} source={require('../../assets/biblio/fillelivre.jpg')}></ImageBackground>
+      <ImageBackground style={{height:'100%', flex:1}} source={require('../../assets/biblio/study-group-african-people.jpg')}></ImageBackground>
+      <ImageBackground style={{height:'100%', flex:1}} source={require('../../assets/biblio/young-student-working-assignment.jpg')}></ImageBackground>
     </View>
   )
 }
@@ -17,10 +17,9 @@ const styles = StyleSheet.create({
   container:{
     marginTop:2,
    // backgroundColor:'red',
-    height:150,
+    height:200,
     width:WIDTH,
     flexDirection:'row',
-    justifyContent:'space-between'
   }
 })
 

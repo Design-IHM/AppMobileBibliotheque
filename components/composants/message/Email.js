@@ -56,7 +56,7 @@ const Email = () => {
 
   function subscriber() {
     if (!datUser?.email) return;
-    
+
     const docRef = doc(db, 'BiblioUser', datUser.email);
     onSnapshot(docRef, (documentSnapshot) => {
       if (documentSnapshot.exists()) {
@@ -98,17 +98,19 @@ const Email = () => {
 
   async function ajouter() {
     if (!currentUserEmail?.email || !values.trim()) return;
-    
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     const washingtonRef = doc(db, "BiblioUser", currentUserEmail.email);
     const dt = Timestamp.fromDate(new Date());
-    
+    const messageId = dt.nanoseconds.toString(); // Utiliser un identifiant unique
+
     try {
       await updateDoc(washingtonRef, {
         messages: arrayUnion({
-          "recue": "E", 
-          "texte": values.trim(), 
+          id: messageId,
+          "recue": "E",
+          "texte": values.trim(),
           "heure": dt,
           "lu": false // Ajout du champ lu
         })
@@ -141,29 +143,51 @@ const Email = () => {
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp.seconds * 1000);
-    return date.toLocaleTimeString('fr-FR', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
       minute: '2-digit'
     });
   };
+
+  async function markMessageAsRead(messageId) {
+    const messageRef = doc(db, "BiblioUser", datUser.email, "messages", messageId);
+    try {
+      await updateDoc(messageRef, {
+        lu: true
+      });
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+    }
+  }
+
+  useEffect(() => {
+    // Appeler markMessageAsRead lorsque le composant est monté ou lorsque les messages changent
+    if (datUser?.messages) {
+      datUser.messages.forEach((message, index) => {
+        if (!message.lu && index === datUser.messages.length - 1) {
+          markMessageAsRead(message.id); // Assurez-vous que chaque message a un identifiant unique
+        }
+      });
+    }
+  }, [datUser?.messages]);
 
   return (
     <MessageContexte.Provider value={{ signale, setSignale }}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
         <ChatBackground />
-        
+
         {/* Header */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <LinearGradient
-            colors={['#D97706', '#B45309']}
+            colors={['#FF6600', '#FFF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.headerGradient}
           >
-            <BlurView intensity={20} tint="dark" style={styles.headerContent}>
-              <Image 
-                source={require('../../../assets/userIcone.png')} 
+            <BlurView intensity={20} style={styles.headerContent}>
+              <Image
+                source={require('../../../assets/userIcone.png')}
                 style={styles.adminAvatar}
               />
               <View style={styles.headerTextContainer}>
@@ -174,7 +198,7 @@ const Email = () => {
           </LinearGradient>
         </Animated.View>
 
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.keyboardAvoidingView}
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
@@ -206,14 +230,14 @@ const Email = () => {
                       />
                     ))
                   ) : (
-                    <Animated.View 
+                    <Animated.View
                       style={[styles.welcomeContainer, { opacity: fadeAnim }]}
                     >
                       <LinearGradient
-                        colors={['#D97706', '#B45309']}
+                        colors={['#FF6600', '#FFF']}
                         style={styles.welcomeIconContainer}
                       >
-                        <Image 
+                        <Image
                           source={require('../../../assets/userIcone.png')}
                           style={styles.welcomeIcon}
                         />
@@ -235,32 +259,32 @@ const Email = () => {
           <BlurView intensity={30} tint="light" style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
               <TextInput
-                style={styles.messageInput}
-                placeholder="Écrivez votre message..."
-                placeholderTextColor="#9CA3AF"
-                onChangeText={(text) => {
-                  setValues(text);
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }}
-                value={values}
-                multiline
-                maxLength={500}
-                onContentSizeChange={() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }}
+                  style={styles.messageInput}
+                  placeholder="Écrivez votre message..."
+                  placeholderTextColor="#9CA3AF"
+                  onChangeText={(text) => {
+                    setValues(text);
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }}
+                  value={values}
+                  multiline
+                  maxLength={500}
+                  onContentSizeChange={() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }}
               />
               <TouchableOpacity
-                onPress={ajouter}
-                style={styles.sendButton}
-                disabled={!values.trim()}
+                  onPress={ajouter}
+                  style={styles.sendButton}
+                  disabled={!values.trim()}
               >
                 <LinearGradient
-                  colors={values.trim() ? ['#D97706', '#B45309'] : ['#D1D5DB', '#9CA3AF']}
-                  style={styles.sendButtonGradient}
+                    colors={values.trim() ? ['#FF6600', '#FFF'] : ['#D1D5DB', '#9CA3AF']}
+                    style={styles.sendButtonGradient}
                 >
                   <Image
-                    source={require('../../../assets/send.png')}
-                    style={[styles.sendIcon, !values.trim() && styles.sendIconDisabled]}
+                      source={require('../../../assets/send.png')}
+                      style={[styles.sendIcon, !values.trim() && styles.sendIconDisabled]}
                   />
                 </LinearGradient>
               </TouchableOpacity>
@@ -280,9 +304,6 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
-  header: {
-    paddingTop: StatusBar.currentHeight,
-  },
   headerGradient: {
     paddingBottom: 15,
   },
@@ -292,6 +313,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     overflow: 'hidden',
+    backgroundColor: '#FF6600',
   },
   adminAvatar: {
     width: 40,

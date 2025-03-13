@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   },
   bookAvailability: {
     fontSize: 14,
-    color: '#0096F6',
+    color: '#FF6600',
     marginTop: 2,
   },
   noResults: {

@@ -33,13 +33,13 @@ const Accueil = ({navigation}) => {
 
     <View style={{backgroundColor:'#fff',height:'100%'}}>
         <View>
-            <Text style={{textAlign:'center',marginTop:15,fontFamily:'Georgia',fontWeight:'900',fontSize:29,color:'#000'}}>POLYTECH'LEARNING</Text>
+            <Text style={{textAlign:'center',marginTop:15,fontFamily:'San Francisco',fontWeight:'900',fontSize:29,color:'#000'}}>POLYTECH'LEARNING</Text>
             <Text style={{textAlign:'center',color:'#000'}}>Tranformer votre carriere en obtenant un diplome en ligne.</Text>
         </View>
 
         <View>
             <TouchableOpacity onPress={()=> voirDepartement()} style={{backgroundColor:'#000',height:50,width:130,alignSelf:'center',marginTop:30,borderRadius:20,shadowColor: '#171717',shadowOffset: {width: -2, height: 4},shadowOpacity: 0.4,shadowRadius: 3,}}>
-                <Text style={{textAlign:'center',fontFamily:'Georgia',color:'#fff',marginTop:13,fontSize:20,fontWeight:'600'}}>Continuer</Text>
+                <Text style={{textAlign:'center',fontFamily:'Roboto',color:'#fff',marginTop:13,fontSize:20,fontWeight:'600'}}>Continuer</Text>
             </TouchableOpacity>
         </View>
         {

@@ -8,7 +8,7 @@ const ChatBackground = () => {
   return (
     <View style={StyleSheet.absoluteFill}>
       <LinearGradient
-        colors={['#FFFBF5', '#FFF1E6']}
+        colors={['#FFFBF5', '#FF6600']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

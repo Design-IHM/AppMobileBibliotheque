@@ -7,12 +7,14 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { auth, db } from '../../config'
 import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { UserContext } from '../context/UserContext'
+import {useNavigation} from "@react-navigation/native";
 
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
 const Teb = ["","","",""]
 
 export default function Parametre(props) {
+  const navigation = useNavigation();
   const {currentUserNewNav} = useContext(UserContext)
   const [datUserParams, setDatUserParams] = useState('')
   const [testT, setTestT] = useState(true)
@@ -199,9 +201,15 @@ export default function Parametre(props) {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{margin:10}}>
-          <View style={{flexDirection:'row',justifyContent:'flex-end',margin:1,height:25,marginBottom:10}}>
-            <TouchableOpacity 
-              onPress={showDialog} 
+          <View style={{flexDirection:'row',justifyContent:'space-between',margin:1,height:25,marginBottom:10}}>
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#007AFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('LoginScreen')}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -276,7 +284,7 @@ export default function Parametre(props) {
                 position: 'absolute',
                 bottom: 5,
                 right: 5,
-                backgroundColor: '#4a90e2',
+                backgroundColor: '#FF8A50',
                 borderRadius: 15,
                 padding: 8,
                 elevation: 5,
@@ -304,7 +312,7 @@ export default function Parametre(props) {
           {renderHistorique()}
         </View>
 
-        <ImageBackground source={require('../../assets/bibi.jpg')}  style={{height:150,width:WIDTH}}></ImageBackground>
+
         
         <Modal animationType='slide'
         transparent={false}

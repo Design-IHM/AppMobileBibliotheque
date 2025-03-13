@@ -166,7 +166,7 @@ const Parametre2 = (props) => {
                 position: 'absolute',
                 bottom: 5,
                 right: 5,
-                backgroundColor: '#4a90e2',
+                backgroundColor: '#FF8A50',
                 borderRadius: 15,
                 padding: 8,
                 elevation: 5,

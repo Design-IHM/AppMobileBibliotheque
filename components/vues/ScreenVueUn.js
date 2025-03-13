@@ -1,45 +1,44 @@
-// Example of Splash, Login and Sign Up in React Native
-// https://aboutreact.com/react-native-login-and-signup/
-
-// Import React and Component
 import React, { useState, useEffect, useContext } from 'react';
-import {
-  ActivityIndicator,
-  View,
-  StyleSheet,
-  Image
-} from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, Animated } from 'react-native';
 import { UserContext } from '../context/UserContext';
-import { auth } from '../../config';
 
 const ScreenVueUn = ({ navigation }) => {
   const [animating, setAnimating] = useState(true);
   const { currentUserNewNav } = useContext(UserContext) || {};
 
+  // Animation for fading in text
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
   useEffect(() => {
+    // Fade in the text
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+
     const timer = setTimeout(() => {
       setAnimating(false);
-      navigation.navigate('VueUn', {
-        // Add any required params here
-      });
+      navigation.navigate('VueUn');
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, fadeAnim]);
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../../assets/enspy.jpg')}
-        style={{width: '90%', resizeMode: 'contain', margin: 30}}
-      />
-      <ActivityIndicator
-        animating={animating}
-        color="#FFFFFF"
-        size="large"
-        style={styles.activityIndicator}
-      />
-    </View>
+      <View style={styles.container}>
+        {/* You can add an animation or a dynamic logo here */}
+        <Animated.Text style={[styles.loadingText, { opacity: fadeAnim }]}>
+          Chargement...
+        </Animated.Text>
+
+        <ActivityIndicator
+            animating={animating}
+            color="#FFFFFF"
+            size="large"
+            style={styles.activityIndicator}
+        />
+      </View>
   );
 };
 
@@ -48,7 +47,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#307ecc',
+    backgroundColor: '#FF6600',
+  },
+  loadingText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 20,
   },
   activityIndicator: {
     alignItems: 'center',

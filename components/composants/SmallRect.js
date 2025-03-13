@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   newTag: {
     height: 26,
     width: 50,
-    backgroundColor: '#3498db',
+    backgroundColor: '#FF6600',
     justifyContent: 'center',
     alignItems: 'center',
     borderTopLeftRadius: 10,

@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const WIDTH = Dimensions.get('window').width;
 
-const MessageBubble = ({ message, time, isReceived, isLast }) => {
+const MessageBubble = ({ message, time, isReceived, isLast, isRead }) => {
   const containerStyle = [
     styles.messageContainer,
     isReceived ? styles.receivedContainer : styles.sentContainer,
@@ -12,37 +13,46 @@ const MessageBubble = ({ message, time, isReceived, isLast }) => {
   ];
 
   const bubbleContent = (
-    <>
-      <Text style={[styles.messageText, isReceived ? styles.receivedText : styles.sentText]}>
-        {message}
-      </Text>
-      <Text style={[styles.timeText, isReceived ? styles.receivedTime : styles.sentTime]}>
-        {time}
-      </Text>
-    </>
+      <>
+        <Text style={[styles.messageText, isReceived ? styles.receivedText : styles.sentText]}>
+          {message}
+        </Text>
+        <Text style={[styles.timeText, isReceived ? styles.receivedTime : styles.sentTime]}>
+          {time}
+        </Text>
+        {!isReceived && (
+            <View style={styles.readReceipt}>
+              <Icon
+                  name={isRead ? "done-all" : "done"}
+                  size={16}
+                  color={isRead ? '#3498db' : '#999'}
+              />
+            </View>
+        )}
+      </>
   );
 
   if (isReceived) {
     return (
-      <View style={containerStyle}>
-        <View style={[styles.messageBubble, styles.receivedBubble]}>
-          {bubbleContent}
+        <View style={containerStyle}>
+          <View style={[styles.messageBubble, styles.receivedBubble]}>
+            {bubbleContent}
+          </View>
         </View>
-      </View>
     );
   }
 
   return (
-    <View style={containerStyle}>
-      <LinearGradient
-        colors={['#D97706', '#B45309']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.messageBubble, styles.sentBubble]}
-      >
-        {bubbleContent}
-      </LinearGradient>
-    </View>
+      <View style={containerStyle}>
+        <LinearGradient
+            colors={['#FF6600', '#FF6600']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.messageBubble, styles.sentBubble]}
+        >
+          {bubbleContent}
+        </LinearGradient>
+      </View>
   );
 };
 
@@ -101,6 +111,9 @@ const styles = StyleSheet.create({
   },
   receivedTime: {
     color: '#6B7280',
+  },
+  readReceipt: {
+    marginLeft: 4,
   },
 });
 

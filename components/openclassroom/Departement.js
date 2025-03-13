@@ -54,7 +54,7 @@ const CadreDepartement = ({navigation,nom,img,num,num1,num2,video}) =>{
 
         <View>
         <View style={{width:300}}>
-            <Text style={{margin:4,fontWeight:'800',color:'#000',fontFamily:'Georgia',fontSize:17}}>{nom}</Text>
+            <Text style={{margin:4,fontWeight:'800',color:'#000',fontFamily:'San Francisco',fontSize:17}}>{nom}</Text>
             <Text style={{flexWrap:'wrap',color:'#000',margin:4,fontSize:10}}>decouvrez toutes les notions qui feront de vous le meilleur ingenieur de tous les temps</Text>
         </View>
         <View style={{flexDirection:'row'}}>

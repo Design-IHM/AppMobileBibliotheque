@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginLeft: 15,
     marginBottom: 5,
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
     color: '#2c3e50',
   },
   subtitle: {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   },
   similarityScore: {
     fontSize: 14,
-    color: '#3498db',
+    color: '#FF8A50',
     fontWeight: '500',
   },
   consultations: {

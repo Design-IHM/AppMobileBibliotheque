@@ -25,7 +25,7 @@ const normalizeString = (str) => {
 const Produit = ({ route, navigation }) => {
   // Extraire uniquement les données nécessaires de route.params
   const { salle, desc, etagere, exemplaire, image, name, cathegorie, commentaire, nomBD, type: bookType } = route.params || {};
-  
+
   // Normaliser le nom du livre pour la recherche avec vérification
   const normalizedName = name ? normalizeString(name) : '';
 
@@ -35,7 +35,7 @@ const Produit = ({ route, navigation }) => {
 
   // Définir une valeur par défaut pour le type
   const type = bookType || cathegorie;
-  
+
   const TITRE = name || '';
   const [dt, setDt] = useState(Timestamp.now());
 
@@ -77,7 +77,7 @@ const Produit = ({ route, navigation }) => {
 
       const userRef = doc(db, "BiblioUser", currentUserdata.email);
       const userDoc = await getDoc(userRef);
-      
+
       if (!userDoc.exists()) {
         // Créer le document utilisateur s'il n'existe pas
         await setDoc(userRef, {
@@ -96,7 +96,7 @@ const Produit = ({ route, navigation }) => {
       }
 
       const userData = userDoc.data() || {};
-      
+
       // Vérifier le nombre de réservations actives
       const activeReservations = [
         userData.etat1,
@@ -141,14 +141,14 @@ const Produit = ({ route, navigation }) => {
       for (const collectionName of collections) {
         const q = query(collection(db, collectionName));
         const querySnapshot = await getDocs(q);
-        
+
         for (const doc of querySnapshot.docs) {
           const bookData = doc.data();
           if (normalizeString(bookData.name) === normalizedName) {
             // Livre trouvé, vérifier les exemplaires
             if (bookData.exemplaire > 0) {
               const batch = writeBatch(db);
-              
+
               // Mettre à jour le nombre d'exemplaires
               const bookRef = doc.ref;
               batch.update(bookRef, {
@@ -230,7 +230,7 @@ const Produit = ({ route, navigation }) => {
       // D'abord vérifier dans la collection principale
       let bookRef = doc(db, primaryCollection, name);
       let bookDoc = await getDoc(bookRef);
-      
+
       // Si non trouvé, essayer avec le nom original
       if (!bookDoc.exists()) {
         const originalDocRef = doc(db, primaryCollection, name);
@@ -244,10 +244,10 @@ const Produit = ({ route, navigation }) => {
           name: bookDoc.id,
           exemplaires: bookData.exemplaire
         });
-        setData([{ 
-          id: bookDoc.id, 
+        setData([{
+          id: bookDoc.id,
           ...bookData,
-          collection: primaryCollection 
+          collection: primaryCollection
         }]);
         if (bookData.description && !desc) {
           setBookDescription(bookData.description);
@@ -276,10 +276,10 @@ const Produit = ({ route, navigation }) => {
               name: tempSnap.id,
               exemplaires: bookData.exemplaire
             });
-            setData([{ 
-              id: tempSnap.id, 
+            setData([{
+              id: tempSnap.id,
               ...bookData,
-              collection: collection 
+              collection: collection
             }]);
             if (bookData.description && !desc) {
               setBookDescription(bookData.description);
@@ -314,7 +314,7 @@ const Produit = ({ route, navigation }) => {
       try {
         const docRef = doc(db, 'BiblioInformatique', nomBD);
         const docSnap = await getDoc(docRef);
-        
+
         if (docSnap.exists()) {
           const bookData = docSnap.data();
           if (bookData.commentaire) {
@@ -325,7 +325,7 @@ const Produit = ({ route, navigation }) => {
         console.error("Erreur lors du chargement des commentaires:", error);
       }
     };
-    
+
     loadComments();
     fetchSimilarBooks();
   }, [nomBD]);
@@ -338,7 +338,7 @@ const Produit = ({ route, navigation }) => {
       try {
         const userRef = doc(db, "BiblioUser", currentUserdata.email);
         const userDoc = await getDoc(userRef);
-        
+
         if (!userDoc.exists()) {
           await setDoc(userRef, {
             email: currentUserdata.email,
@@ -353,7 +353,7 @@ const Produit = ({ route, navigation }) => {
 
         const userData = userDoc.data() || {};
         const currentHistory = Array.isArray(userData.historique) ? userData.historique : [];
-        
+
         const newHistoryItem = {
           cathegorieDoc: cathegorie || 'Non catégorisé',
           type: type || cathegorie || 'Non catégorisé',
@@ -364,8 +364,8 @@ const Produit = ({ route, navigation }) => {
         };
 
         // Vérifier si l'élément existe déjà dans l'historique
-        const exists = currentHistory.some(item => 
-          item && item.nameDoc === newHistoryItem.nameDoc && 
+        const exists = currentHistory.some(item =>
+          item && item.nameDoc === newHistoryItem.nameDoc &&
           item.cathegorieDoc === newHistoryItem.cathegorieDoc
         );
 
@@ -420,7 +420,7 @@ const Produit = ({ route, navigation }) => {
       // Récupérer le nom de l'utilisateur depuis BiblioUser
       const userRef = doc(db, 'BiblioUser', currentUserdata.email);
       const userSnap = await getDoc(userRef);
-      
+
       if (!userSnap.exists()) {
         Alert.alert('Erreur', 'Votre profil utilisateur n\'a pas été trouvé');
         return;
@@ -465,12 +465,12 @@ const Produit = ({ route, navigation }) => {
       } else {
         // Si non trouvé, chercher dans toutes les collections
         const collections = ['BiblioGM', 'BiblioGE', 'BiblioGI', 'BiblioGT', 'BiblioInformatique'];
-        
+
         for (const collectionName of collections) {
           const collectionRef = collection(db, collectionName);
           const q = query(collectionRef);
           const querySnapshot = await getDocs(q);
-          
+
           for (const doc of querySnapshot.docs) {
             const docData = doc.data();
             if (normalizeString(docData.name) === normalizedName) {
@@ -491,7 +491,7 @@ const Produit = ({ route, navigation }) => {
 
       // Ajouter le commentaire
       const currentComments = Array.isArray(bookData.commentaire) ? bookData.commentaire : [];
-      
+
       const newComment = {
         nomUser: userName,
         texte: values.trim(),
@@ -502,7 +502,7 @@ const Produit = ({ route, navigation }) => {
 
       // Vérifier si l'utilisateur a déjà commenté
       const userCommentIndex = currentComments.findIndex(comment => comment.userId === currentUserdata.uid);
-      
+
       let updatedComments;
       if (userCommentIndex !== -1) {
         updatedComments = [...currentComments];
@@ -520,7 +520,7 @@ const Produit = ({ route, navigation }) => {
       setValues("");
       setValuesNote("0");
       setModalComm(false);
-      
+
       Alert.alert('Succès', 'Votre avis a été ajouté avec succès');
     } catch (error) {
       console.error("Erreur lors de l'ajout du commentaire:", error);
@@ -566,12 +566,12 @@ const Produit = ({ route, navigation }) => {
     if (!str1 || !str2) return 0;
     const s1 = normalizeString(str1).split(' ').filter(Boolean);
     const s2 = normalizeString(str2).split(' ').filter(Boolean);
-    
+
     if (s1.length === 0 || s2.length === 0) return 0;
-    
+
     // Compter les mots communs
     const commonWords = s1.filter(word => s2.includes(word));
-    
+
     // Calculer le score de similarité (0 à 1)
     return commonWords.length / Math.max(s1.length, s2.length);
   };
@@ -594,7 +594,7 @@ const Produit = ({ route, navigation }) => {
           const booksRef = collection(db, collectionName);
           const q = query(booksRef);
           const querySnapshot = await getDocs(q);
-          
+
           querySnapshot.forEach((doc) => {
             const bookData = doc.data();
             if (bookData && bookData.name && bookData.name !== name) {
@@ -628,9 +628,9 @@ const Produit = ({ route, navigation }) => {
         .slice(0, 5);
 
       console.log('Livres similaires trouvés:', recommendations.length);
-      
+
       setSimilarBooks(recommendations);
-      
+
       if (recommendations.length === 0) {
         console.log('Aucune recommandation trouvée pour:', name);
       }
@@ -654,7 +654,7 @@ const Produit = ({ route, navigation }) => {
   const calculateRatingDistribution = () => {
     const distribution = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
     if (!comment || comment.length === 0) return distribution;
-    
+
     comment.forEach(c => {
       const note = Number(c.note);
       if (note >= 1 && note <= 5) {
@@ -698,7 +698,7 @@ const Produit = ({ route, navigation }) => {
                 styles.exemplairesText,
                 exemplaire > 0 ? styles.disponible : styles.nonDisponible
               ]}>
-                {exemplaire > 0 
+                {exemplaire > 0
                   ? `${exemplaire} exemplaire${exemplaire > 1 ? 's' : ''} disponible${exemplaire > 1 ? 's' : ''}`
                   : 'Indisponible'
                 }
@@ -729,7 +729,7 @@ const Produit = ({ route, navigation }) => {
         <View style={styles.descriptionContainer}>
           <View style={styles.descriptionHeader}>
             <Text style={styles.descriptionTitle}>Description</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setModalDescription(true)}
               style={styles.seeMoreButton}
             >
@@ -737,11 +737,11 @@ const Produit = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
           <Text style={styles.descriptionText}>
-            {bookDescription ? 
-              (bookDescription.length > 150 ? 
-                `${bookDescription.slice(0, 150)}...` : 
+            {bookDescription ?
+              (bookDescription.length > 150 ?
+                `${bookDescription.slice(0, 150)}...` :
                 bookDescription
-              ) : 
+              ) :
               "Aucune description disponible"
             }
           </Text>
@@ -767,7 +767,7 @@ const Produit = ({ route, navigation }) => {
         <View style={styles.reviewsContainer}>
           <View style={styles.reviewsHeader}>
             <Text style={styles.reviewsTitle}>Notes et avis</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addReviewButton}
               onPress={() => setModalComm(true)}
             >
@@ -816,7 +816,7 @@ const Produit = ({ route, navigation }) => {
                       <View style={styles.reviewerInfo}>
                         <Text style={styles.reviewerName}>{review.nomUser}</Text>
                         <Text style={styles.reviewDate}>
-                          {review.heure?.seconds ? 
+                          {review.heure?.seconds ?
                             new Date(review.heure.seconds * 1000).toLocaleDateString() :
                             new Date().toLocaleDateString()}
                         </Text>
@@ -848,7 +848,7 @@ const Produit = ({ route, navigation }) => {
                     </View>
                   </View>
                 ))}
-                
+
                 {showAllComments && comment.length > 3 && (
                   <View style={styles.additionalComments}>
                     {comment.slice(3).map((review, index) => (
@@ -857,7 +857,7 @@ const Produit = ({ route, navigation }) => {
                           <View style={styles.reviewerInfo}>
                             <Text style={styles.reviewerName}>{review.nomUser}</Text>
                             <Text style={styles.reviewDate}>
-                              {review.heure?.seconds ? 
+                              {review.heure?.seconds ?
                                 new Date(review.heure.seconds * 1000).toLocaleDateString() :
                                 new Date().toLocaleDateString()}
                             </Text>
@@ -875,9 +875,9 @@ const Produit = ({ route, navigation }) => {
                     ))}
                   </View>
                 )}
-                
+
                 {comment.length > 3 && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.seeAllReviewsButton}
                     onPress={() => setShowAllComments(!showAllComments)}
                   >
@@ -946,7 +946,7 @@ const Produit = ({ route, navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Donner mon avis</Text>
-            
+
             <View style={styles.ratingInput}>
               <Text style={styles.ratingLabel}>Note :</Text>
               <View style={styles.starRatingContainer}>
@@ -1145,7 +1145,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   empruntButton: {
-    backgroundColor: '#1976d2',
+    backgroundColor: '#FF6600',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 25,
@@ -1177,7 +1177,7 @@ const styles = StyleSheet.create({
   locationTitle: {
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Georgia',
+    fontFamily: 'Roboto',
     marginBottom: 15,
   },
   locationDetails: {
@@ -1228,13 +1228,13 @@ const styles = StyleSheet.create({
   descriptionTitle: {
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
   },
   seeMoreButton: {
     padding: 5,
   },
   seeMoreText: {
-    color: '#007AFF',
+    color: '#FF6600',
     fontSize: 15,
   },
   descriptionText: {
@@ -1270,7 +1270,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   modalCloseButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6600',
     padding: 12,
     borderRadius: 8,
     marginTop: 15,
@@ -1340,7 +1340,7 @@ const styles = StyleSheet.create({
   loader: {
     marginVertical: 20,
   },
-  
+
   reviewsContainer: {
     backgroundColor: '#fff',
     marginTop: 15,
@@ -1355,10 +1355,10 @@ const styles = StyleSheet.create({
   reviewsTitle: {
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
   },
   addReviewButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6600',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
@@ -1489,7 +1489,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
   },
   seeAllReviewsText: {
-    color: '#007AFF',
+    color: '#FF6600',
     fontWeight: '600',
   },
   modalOverlay: {
@@ -1497,19 +1497,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
   },
   ratingInput: {
     marginBottom: 20,
@@ -1552,7 +1539,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f2f2f2',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6600',
   },
   cancelButtonText: {
     color: '#666',

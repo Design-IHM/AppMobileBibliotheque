@@ -1,71 +1,48 @@
-// Example of Splash, Login and Sign Up in React Native
-// https://aboutreact.com/react-native-login-and-signup/
-
 // Import React and Component
-import React, {useState, useEffect} from 'react';
-import {
-  ActivityIndicator,
-  View,
-  StyleSheet,
-  Image
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
 
-import {onAuthStateChanged} from "firebase/auth"
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../config';
 
+const Screen = ({ navigation }) => {
+    // State for ActivityIndicator animation
+    const [animating, setAnimating] = useState(true);
+    const [loadingData, setLoadingData] = useState(false);
 
-//import AsyncStorage from '@react-native-community/async-storage';
+    useEffect(() => {
+        onAuthStateChanged(auth, () => {
+            setLoadingData(true);
+        });
+    }, []);
 
-const Screen = ({navigation}) => {
- //State for ActivityIndicator animation
-  const [animating, setAnimating] = useState(true)
+    useEffect(() => {
+        setTimeout(() => {
+            setAnimating(false);
+            navigation.replace(loadingData === false ? 'NavLogin' : 'NavApp');
+        }, 5000);
+    }, [loadingData]);
 
- const [loadingData, setLoadingData] = useState(false)
-
-
-  useEffect(() =>{
-    onAuthStateChanged(auth, ()=>{
-       setLoadingData(true)  
-     })
-  //   console.log('current user', currentUser)  
-   },[])
-  useEffect(() => {
-    setTimeout(() => {
-      setAnimating(false);
-        navigation.replace(
-          loadingData === false ? 'NavLogin' : 'NavApp'
-        )
-    
-    }, 5000);
-  }, []);
-
-  return (
-    <View style={styles.container}>
-      <Image
-        source={require('../../assets/enspy.jpg')}
-        style={{width: '90%', resizeMode: 'contain', margin: 30}}
-      />
-      <ActivityIndicator
-        animating={animating}
-        color="#FFFFFF"
-        size="large"
-        style={styles.activityIndicator}
-      />
-    </View>
-  );
+    return (
+        <View style={styles.container}>
+            <ActivityIndicator animating={animating} size="large" color="#0000ff" />
+            <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </View>
+    );
 };
 
 export default Screen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  activityIndicator: {
-    alignItems: 'center',
-    height: 80,
-  },
+    container: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+    },
+    loadingText: {
+        marginTop: 20,
+        fontSize: 16,
+        color: '#000',
+    },
 });

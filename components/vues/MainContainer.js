@@ -1,13 +1,14 @@
-import { View, Text, SafeAreaView, Image, Dimensions, TouchableOpacity, FlatList, Modal, ScrollView, TextInput, StyleSheet, Button, ActivityIndicator } from 'react-native'
-import React, { createContext, useState, useEffect } from 'react'
+import { View, Text, SafeAreaView, Image, Dimensions, TouchableOpacity, FlatList, Modal, ScrollView, TextInput, StyleSheet, Button, ActivityIndicator, Linking } from 'react-native'
+import React, { createContext, useState, useEffect, useContext } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import Ionicons from 'react-native-vector-icons/Ionicons'
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../../config'
 import { collection, getDocs, doc, updateDoc, query, where, limit } from 'firebase/firestore'
 
+// Créer un seul contexte utilisateur (suppression du doublon)
 export const UserContext = createContext()
 
-import { MessageContexte } from '../composants/message/Email'
 import SearchModal from '../composants/SearchModal';
 
 //Screens
@@ -35,23 +36,21 @@ import PageWeb2 from '../composants/PageWeb2'
 import Parametre from './Parametre'
 import NavParams from '../navigation/NavParams'
 
-//import Email from '../composants/message/Email'
-// Screen names 
+// Screen names
 const homeName = 'Home'
 const detailsName = 'Settings'
 const settingsName = 'E-learning'
-const web = 'Search'
-
-//data.map
+const search = 'Search'
+const messagesName = 'Chat'
 
 //Dimension
 const HEIGHT = Dimensions.get('window').height
 const WIDTH = Dimensions.get('window').width
 
-
 const Tab = createBottomTabNavigator();
 
-export const UserContexte = createContext();
+// Suppression du doublon de contexte
+// Utilisation du UserContext défini plus haut
 
 const MainContainer = ({ navigation, route }) => {
   const screenOptions = ({ route }) => ({
@@ -62,7 +61,7 @@ const MainContainer = ({ navigation, route }) => {
           iconName = focused ? 'home' : 'home-outline';
           break;
         case 'Messages':
-          iconName = focused ? 'mail' : 'mail-outline';
+          iconName = focused ? 'chatbubble' : 'chatbubble-outline';
           break;
         case 'OpenClass':
           iconName = focused ? 'school' : 'school-outline';
@@ -72,33 +71,36 @@ const MainContainer = ({ navigation, route }) => {
           break;
         default:
           iconName = 'help-outline';
+          break;
       }
-      return <Ionicons name={iconName} size={size} color={color} />;
-    },
+
+      return <Ionicons name={iconName} size={size} color={color}/>;
+    }
   });
-
-
-  // const {datUserTest, setDatUserTest,currentUserRecent, setCurrentUserRecent,datUser, setDatUser,currentUserNewNav}=useContext(UserContext)
-
-
 
   const voirMessage = () => {
     navigation.navigate('Panier', {})
-
-
   }
 
-  const [modal, setModal] = React.useState(false);
-  const [datUser1, setDatUser1] = React.useState(route.params?.datUser || null);
+  const handlePress = () => {
+    Linking.openURL('https://www.google.com').catch(err => {
+      console.error("Erreur lors de l'ouverture de Google :", err);
+    });
+  };
+
+  const [modal, setModal] = useState(false);
+  const [datUser1, setDatUser1] = useState(route.params?.datUser || null);
   const [VuePartCours, setPartVueCours] = useState("");
   const [signalMain, setSignalMain] = useState(false)
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+
   function lire() {
     setSignalMain(true)
     navigation.navigate('Email')
   }
 
-  const [data, setData] = React.useState([]);
-  const [loader, setLoader] = React.useState(true);
+  const [data, setData] = useState([]);
+  const [loader, setLoader] = useState(true);
 
   const getData = async () => {
     try {
@@ -116,11 +118,10 @@ const MainContainer = ({ navigation, route }) => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     getData();
   }, []);
 
-  //anuler1
   const annuler = async (dos) => {
     try {
       const userRef = doc(db, "BiblioUser", dos.email);
@@ -135,128 +136,108 @@ const MainContainer = ({ navigation, route }) => {
   };
 
   return (
-    <UserContexte.Provider value={{ VuePartCours, setPartVueCours, modal, setModal, signalMain, setSignalMain, datUser1 }}>
-      <React.Fragment>
-        <Tab.Navigator
-          initialRouteName={homeName}
-          screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) => {
-              let iconName;
-              let rn = route.name;
+      <UserContext.Provider value={{ VuePartCours, setPartVueCours, modal, setModal, signalMain, setSignalMain, datUser1 }}>
+        <React.Fragment>
+          <Tab.Navigator
+              initialRouteName={homeName}
+              screenOptions={({ route }) => ({
+                tabBarIcon: ({ focused, color, size }) => {
+                  let iconName;
+                  let rn = route.name;
 
-              if (rn === homeName) {
-                iconName = focused ? 'home' : 'home-outline';
-              } else if (rn === detailsName) {
-                iconName = focused ? 'cog' : 'cog-outline';
-              } else if (rn === settingsName) {
-                iconName = focused ? 'book' : 'book-outline';
-              } else if (rn === web) {
-                iconName = focused ? 'search' : 'search-outline';
-              }
-              return <Ionicons name={iconName} size={size} color={color} />;
-            },
-            tabBarActiveTintColor: '#87CEEB',
-            tabBarInactiveTintColor: 'gray',
-          })}
-        >
-          {!signalMain ? (
-            <Tab.Screen
-              name={homeName}
-              component={NavShop}
-              options={{
-                headerTitle: (props) => (
-                  <SafeAreaView>
-                    <View style={styles.headerContainer}>
-                      <TouchableOpacity onPress={() => lire()}>
-                        <Image
-                          style={styles.messageIcon}
-                          source={require('../../assets/image/message2.jpg')}
-                          resizeMode='cover'
-                        />
-                      </TouchableOpacity>
-                      <View style={styles.logoContainer}>
-                        <Image 
-                          style={styles.logo} 
-                          source={require('../../assets/enspy.jpg')} 
-                        />
-                        <Text style={styles.title}>BIBLIO ENSPY</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => setModal(true)}>
-                        <Image
-                          style={styles.searchIcon}
-                          source={require('../../assets/image/search.png')}
-                          resizeMode='cover'
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
-                        <Image
-                          style={styles.cartIcon}
-                          source={require('../../assets/image/panier1.jpg')}
-                          resizeMode='cover'
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </SafeAreaView>
-                ),
-                headerTitleStyle: { flex: 1, textAlign: 'center' },
-              }}
-            />
-          ) : (
-            <Tab.Screen
-              name={homeName}
-              component={NavShop}
-              options={{
-                headerTitle: (props) => (
-                  <SafeAreaView>
-                    <View style={styles.headerContainer}>
-                      <TouchableOpacity onPress={() => lire()}>
-                        <Image
-                          style={styles.messageIcon}
-                          source={require('../../assets/image/message2.jpg')}
-                          resizeMode='cover'
-                        />
-                      </TouchableOpacity>
-                      <View style={styles.logoContainer}>
-                        <Image 
-                          style={styles.logo} 
-                          source={require('../../assets/enspy.jpg')} 
-                        />
-                        <Text style={styles.title}>E N S P Y</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => setModal(true)}>
-                        <Image
-                          style={styles.searchIcon}
-                          source={require('../../assets/image/search.png')}
-                          resizeMode='cover'
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
-                        <Image
-                          style={styles.cartIcon}
-                          source={require('../../assets/image/panier1.jpg')}
-                          resizeMode='cover'
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </SafeAreaView>
-                ),
-                headerTitleStyle: { flex: 1, textAlign: 'center' },
-              }}
-            />
-          )}
-          <Tab.Screen name={settingsName} component={NavOpenClass} />
-          <Tab.Screen name={web} component={PageWeb2} />
-          <Tab.Screen name={detailsName} component={NavParams} />
-        </Tab.Navigator>
+                  if (rn === homeName) {
+                    iconName = focused ? 'home' : 'home-outline';
+                  } else if (rn === detailsName) {
+                    iconName = focused ? 'cog' : 'cog-outline';
+                  } else if (rn === settingsName) {
+                    iconName = focused ? 'book' : 'book-outline';
+                  } else if (rn === search) {
+                    iconName = focused ? 'search' : 'search-outline';
+                  } else if(rn === messagesName) {
+                    iconName = focused ? 'chatbubble' : 'chatbubble-outline';
+                  }
+                  return <Ionicons name={iconName} size={size} color={color} />;
+                },
+                tabBarActiveTintColor: '#FF8A50',
+                tabBarInactiveTintColor: 'gray',
+              })}
+          >
+            {!signalMain ? (
+                <Tab.Screen
+                    name={homeName}
+                    component={NavShop}
+                    options={{
+                      headerTitle: (props) => (
+                          <SafeAreaView>
+                            <View style={styles.headerContainer}>
+                              <View style={styles.logoContainer}>
+                                <Image
+                                    style={styles.logo}
+                                    source={require('../../assets/enspy.jpg')}
+                                />
+                                <Text style={styles.title}>BIBLIO ENSPY</Text>
+                              </View>
+                              <TouchableOpacity onPress={handlePress}>
+                                <FontAwesome name="google" size={24} color="blue" />
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
+                                <Ionicons name="search-outline" size={24} color="black" />
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
+                                <Ionicons name="cart-outline" size={24} color="black" />
+                              </TouchableOpacity>
+                            </View>
+                          </SafeAreaView>
+                      ),
+                      headerTitleAlign: 'center',
+                      headerTitleStyle: { flex: 1, textAlign: 'center' },
+                    }}
+                />
+            ) : (
+                <Tab.Screen
+                    name={homeName}
+                    component={NavShop}
+                    options={{
+                      headerTitle: (props) => (
+                          <SafeAreaView>
+                            <View style={styles.headerContainer}>
+                              <View style={styles.logoContainer}>
+                                <Image
+                                    style={styles.logo}
+                                    source={require('../../assets/enspy.jpg')}
+                                />
+                                <Text style={styles.title}>E N S P Y</Text>
+                              </View>
+                              <TouchableOpacity onPress={handlePress}>
+                                <FontAwesome name="google" size={24} color="blue" />
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
+                                <Ionicons name="search-outline" size={24} color="black" />
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
+                                <Ionicons name="cart-outline" size={24} color="black" />
+                              </TouchableOpacity>
+                            </View>
+                          </SafeAreaView>
+                      ),
+                      headerTitleAlign: 'center',
+                      headerTitleStyle: { flex: 1, textAlign: 'center' },
+                    }}
+                />
+            )}
+            <Tab.Screen name={settingsName} component={NavOpenClass} />
+            <Tab.Screen name={messagesName} component={Email} />
+            <Tab.Screen name={detailsName} component={NavParams} />
+          </Tab.Navigator>
 
-        <SearchModal 
-          visible={modal} 
-          onClose={() => setModal(false)} 
-          navigation={navigation}
-        />
+          <SearchModal
+              visible={searchModalVisible}
+              onClose={() => setSearchModalVisible(false)}
+              navigation={navigation}
+          />
 
-      </React.Fragment>
-    </UserContexte.Provider>
+        </React.Fragment>
+      </UserContext.Provider>
   );
 }
 
@@ -287,8 +268,8 @@ const styles = StyleSheet.create({
   title: {
     color: '#000',
     fontWeight: 'bold',
-    fontSize: 25,
-    fontFamily: 'Georgia',
+    fontSize: 20,
+    fontFamily: 'San Francisco',
     marginLeft: 5,
     marginRight: 15,
   },

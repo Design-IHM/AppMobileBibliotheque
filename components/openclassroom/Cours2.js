@@ -43,7 +43,7 @@ const Cours2 = (props) => {
 
 
         <View style={{margin:7,width:WIDTH*0.9}}>
-           <Text style={{color:'#000',fontWeight:'800',fontSize:17,textAlign:'center',fontFamily:'Georgia'}}>{partieDuCours.titre}</Text>
+           <Text style={{color:'#000',fontWeight:'800',fontSize:17,textAlign:'center',fontFamily:'San Francisco'}}>{partieDuCours.titre}</Text>
         </View>
          <ImageBackground style={{height:250}} source={require('../../assets/image/gi.jpg')}>
         <TouchableOpacity onPress={()=>voirVideo(partieDuCours.lienVideo)}>
@@ -52,18 +52,18 @@ const Cours2 = (props) => {
       </ImageBackground>
 
       <View style={{width:WIDTH*0.9,margin:5,}}>
-        <Text style={{fontFamily:'Georgia'}}>{partieDuCours.texte1}</Text>
+        <Text style={{fontFamily:'Roboto'}}>{partieDuCours.texte1}</Text>
       </View>
 
       <Image style={{height:350,width:WIDTH}} source={{uri:partieDuCours.lienImage}} />
 
       <View style={{width:WIDTH*0.9,margin:5,}}>
-        <Text style={{fontFamily:'Georgia'}}>{partieDuCours.texte2}</Text>
+        <Text style={{fontFamily:'Roboto'}}>{partieDuCours.texte2}</Text>
       </View>
 
       <View style={{justifyContent:'space-between',flexDirection:'row',marginRight:25,marginBottom:20}}>
         <Text></Text>
-        <TouchableOpacity onPress={()=>voirCours(chapSuivant,index+1)} style={{height:40,width:100,marginTop:30,backgroundColor:'#191970'}}>
+        <TouchableOpacity onPress={()=>voirCours(chapSuivant,index+1)} style={{height:40,width:100,marginTop:30,backgroundColor:'#F16522'}}>
             <Text style={{color:'#fff',fontWeight:'800',fontSize:17,textAlign:'center',marginTop:7}}>Continuer</Text>
         </TouchableOpacity>
       </View>

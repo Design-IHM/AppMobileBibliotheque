@@ -166,7 +166,7 @@ const CadreMatiere = ({ name, src }) => {
       />
       <View>
         <View style={{ width: 300 }}>
-          <Text style={{ margin: 4, fontWeight: '800', color: '#000', fontFamily: 'Georgia', fontSize: 17 }}>
+          <Text style={{ margin: 4, fontWeight: '800', color: '#000', fontFamily: 'San Francisco', fontSize: 17 }}>
             {name || 'Sans titre'}
           </Text>
           <Text style={{ flexWrap: 'wrap', color: '#000', margin: 4, fontSize: 10 }}>

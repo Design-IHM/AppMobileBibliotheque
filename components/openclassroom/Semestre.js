@@ -52,8 +52,8 @@ const Semestre = (props) => {
 
       <View style={{padding:10}}>
         <View style={{flexDirection:'row',alignContent:'center',width:WIDTH,alignSelf:'center',alignItems:'center',padding:10}}>
-        <Text style={{fontFamily:'Georgia',color:'rgb(136,136,136)',margin:1,textAlign:'center'}}>CD :</Text>
-        <Text style={{fontFamily:'Georgia',color:'rgb(136,136,136)',margin:1,textAlign:'center'}}>prof BOUETOU</Text>
+        <Text style={{fontFamily:'San Francisco',color:'rgb(136,136,136)',margin:1,textAlign:'center'}}>CD :</Text>
+        <Text style={{fontFamily:'San Francisco',color:'rgb(136,136,136)',margin:1,textAlign:'center'}}>prof BOUETOU</Text>
         </View>
        {/* <View style={{flexDirection:'row',marginLeft:20,margin:10}}>
             <Image style={{height:30,width:30,borderRadius:30}} source={require('../../assets/image/barre.jpg')} />

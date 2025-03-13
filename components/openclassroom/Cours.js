@@ -43,7 +43,7 @@ const Cours = (props) => {
 
 
         <View style={{margin:7,width:WIDTH*0.9}}>
-           <Text style={{color:'#000',fontWeight:'800',fontSize:17,textAlign:'center',fontFamily:'Georgia'}}>1{partieDuCours.titre}</Text>
+           <Text style={{color:'#000',fontWeight:'800',fontSize:17,textAlign:'center',fontFamily:'San Francisco'}}>1{partieDuCours.titre}</Text>
         </View>
          <ImageBackground style={{height:250,width:WIDTH}} source={require('../../assets/image/gi.jpg')}>
         <TouchableOpacity onPress={()=>voirVideo(partieDuCours.lienVideo)}>
@@ -52,13 +52,13 @@ const Cours = (props) => {
       </ImageBackground>
 
       <View style={{width:WIDTH*0.9,margin:5,}}>
-        <Text style={{fontFamily:'Georgia'}}>{partieDuCours.texte1}</Text>
+        <Text style={{fontFamily:'Roboto'}}>{partieDuCours.texte1}</Text>
       </View>
 
       <Image style={{height:350,width:WIDTH}} source={{uri:partieDuCours.lienImage}} />
 
       <View style={{width:WIDTH*0.9,margin:5,}}>
-        <Text style={{fontFamily:'Georgia'}}>{partieDuCours.texte2}</Text>
+        <Text style={{fontFamily:'Roboto'}}>{partieDuCours.texte2}</Text>
       </View>
 
       <View style={{justifyContent:'space-between',flexDirection:'row',marginRight:25,marginBottom:20}}>

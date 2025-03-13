@@ -37,13 +37,16 @@ import PubRect from '../composants/PubRect';
 import SmallRect from '../composants/SmallRect';
 import { UserContext } from '../context/UserContext';
 import { API_URL } from '../../apiConfig';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import {MaterialCommunityIcons} from "@expo/vector-icons";
 
 // Constants
 const { width: WIDTH, height: HEIGHT } = Dimensions.get('screen');
 
 // Color palette for consistency
 const COLORS = {
-  primary: '#3498db',
+  primary: '#FF6600',
   secondary: '#2c3e50',
   accent: '#e74c3c',
   background: '#f9f9f9',
@@ -55,7 +58,7 @@ const COLORS = {
     white: '#ffffff'
   },
   success: '#27ae60',
-  info: '#3498db',
+  info: '#F16522',
   warning: '#f39c12',
   error: '#e74c3c',
   divider: 'rgba(128, 128, 128, 0.3)'
@@ -456,21 +459,22 @@ const VueUn = (props) => {
       </View>
 
       <ScrollView>
-        <PubCar />
         <PubRect />
 
         {/* E-Books Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              #Biblio Electronique
+              <FontAwesome name="book" size={24} color="#F16522" />
+              BIBLIO ELECTRONIQUE
             </Text>
+
             <View style={styles.sectionTitleUnderline} />
           </View>
           
           <View style={styles.sectionDescription}>
             <Text style={styles.descriptionText}>
-              Lisez en ligne sur les plus grandes plateformes de e-book du monde.
+              Formez-vous à votre rythme avec des cours certifiants sur les plus grandes plateformes d'apprentissage en ligne.
             </Text>
           </View>
           
@@ -491,14 +495,26 @@ const VueUn = (props) => {
           </ScrollView>
         </View>
 
-        <View style={styles.divider} />
-        <View style={styles.sectionSpacing} />
-        <View style={styles.divider} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            <MaterialIcons name="recommend" size={24} color="#F16522" />
+            RECOMMANDATIONS
+          </Text>
+
+          <View style={styles.sectionTitleUnderline} />
+        </View>
 
         {/* Recommendations Section */}
         {renderRecommendationSection()}
 
-        <View style={styles.divider} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            <MaterialCommunityIcons name="file-document-multiple" size={24} color="#F16522" />
+            RESSOURCES DOCUMENTAIRES
+          </Text>
+
+          <View style={styles.sectionTitleUnderline} />
+        </View>
 
         {/* Tab Selection Section */}
         <View style={styles.tabContainer}>
@@ -510,7 +526,7 @@ const VueUn = (props) => {
             ]}
           >
             <Text style={styles.tabButtonText}>
-              DEPARTEMENT
+              LIVRES
             </Text>
           </TouchableOpacity>
 
@@ -531,7 +547,7 @@ const VueUn = (props) => {
         {activeTab === 'departement' ? (
           <View style={styles.categorySection}>
             <Text style={styles.categorySectionTitle}>
-              LES DEPARTEMENTS
+              LES LIVRES-DEPARTEMENTS
             </Text>
             <View style={styles.circleContainer}>
               <Cercle id="" datUser={datUser} image={imgMeca} cathegorie="Genie Mecanique" props={props} />
@@ -547,7 +563,7 @@ const VueUn = (props) => {
         ) : (
           <View style={styles.categorySection}>
             <Text style={styles.categorySectionTitle}>
-              ANCIENS MEMOIRES
+              LES MEMOIRES-DEPARTEMENTS
             </Text>
             <View style={styles.circleContainer}>
               <Cercle id="" datUser={datUser} image={imgMemGI} cathegorie="Memoire GI" props={props} />
@@ -573,14 +589,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  barre: {
-    marginTop: 5,
-  },
   topScrollView: {
     flexDirection: 'row',
   },
   topBarText: {
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
     fontSize: 20,
     marginRight: 10,
     color: COLORS.text.light,
@@ -599,7 +612,7 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     marginBottom: 20,
     textAlign: 'center',
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
   },
   loginButton: {
     backgroundColor: COLORS.primary,
@@ -626,7 +639,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
     fontWeight: '900',
     color: COLORS.text.primary,
     letterSpacing: 0.5,
@@ -643,7 +656,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     textAlign: 'center',
-    fontFamily: 'Georgia',
+    fontFamily: 'Roboto',
     fontSize: 14,
     color: COLORS.text.secondary,
     lineHeight: 20,
@@ -658,9 +671,6 @@ const styles = StyleSheet.create({
     height: 1,
     width: '100%',
     backgroundColor: COLORS.divider,
-  },
-  sectionSpacing: {
-    height: 20,
   },
   
   // Recommendation section styles
@@ -683,7 +693,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text.secondary,
     marginBottom: 12,
-    fontFamily: 'Georgia',
+    fontFamily: 'Roboto',
   },
   bookCard: {
     width: 160,
@@ -712,12 +722,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 4,
     color: COLORS.text.primary,
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
   },
   bookCategory: {
     fontSize: 14,
     color: COLORS.text.secondary,
-    fontFamily: 'Georgia',
+    fontFamily: 'Roboto',
     marginBottom: 4,
   },
   scoreContainer: {
@@ -744,7 +754,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     color: COLORS.text.secondary,
-    fontFamily: 'Georgia',
+    fontFamily: 'Roboto',
   },
   
   // Tab styles
@@ -783,7 +793,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   categorySectionTitle: {
-    fontFamily: 'Georgia',
+    fontFamily: 'San Francisco',
     fontSize: 20,
     color: COLORS.text.primary,
     textAlign: 'center',

@@ -55,7 +55,7 @@ const CoursInscrit = (props) => {
         <View style={{height:1,width:WIDTH,backgroundColor:'gray',marginTop:15}}></View>
 
         <View style={{margin:7,width:WIDTH*0.9,padding:20}}>
-           <Text style={{color:'#000',fontWeight:'800',fontSize:17,textAlign:'center',fontFamily:'Georgia'}}>{partieDuCours.titre}</Text>
+           <Text style={{color:'#000',fontWeight:'800',fontSize:17,textAlign:'center',fontFamily:'San Francisco'}}>{partieDuCours.titre}</Text>
         </View>
         
         <TouchableOpacity style={{height:200,width:350,alignSelf:'center',backgroundColor:'rgba(136,136,136,0.5)',borderRadius:20}}  onPress={()=>voirVideo(partieDuCours.lienVideo)}>
@@ -64,13 +64,13 @@ const CoursInscrit = (props) => {
      
 
       <View style={{width:WIDTH*0.9,margin:5,padding:20}}>
-        <Text style={{fontFamily:'Georgia'}}>{partieDuCours.texte1}</Text>
+        <Text style={{fontFamily:'Roboto'}}>{partieDuCours.texte1}</Text>
       </View>
 
       <Image style={{height:200,width:WIDTH*0.7,alignSelf:'center',}} resizeMode='contain' source={{uri:partieDuCours.lienImage}} />
 
       <View style={{width:WIDTH*0.9,margin:5,padding:20}}>
-        <Text style={{fontFamily:'Georgia'}}>{partieDuCours.texte2}</Text>
+        <Text style={{fontFamily:'Roboto'}}>{partieDuCours.texte2}</Text>
       </View>
 
       <View style={{justifyContent:'space-between',flexDirection:'row',marginBottom:20,width:WIDTH*0.9,margin:5}}>

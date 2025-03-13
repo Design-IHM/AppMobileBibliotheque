@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   exemplaire: {
     fontSize: 12,
-    color: '#3498db',
+    color: '#FF6600',
     fontWeight: '600',
   },
   modalContainer: {
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   cancelButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#FF6600',
     marginTop: 10,
   },
   cancelText: {
