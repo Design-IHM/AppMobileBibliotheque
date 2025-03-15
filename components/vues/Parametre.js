@@ -7,6 +7,7 @@ import { db } from '../../config'
 import { UserContext } from '../context/UserContext'
 import { useNavigation } from "@react-navigation/native"
 
+
 const WIDTH = Dimensions.get('screen').width
 const HEIGHT = Dimensions.get('screen').height
 

@@ -157,7 +157,7 @@ export default function Historique({ route, navigation }) {
                     <ActivityIndicator size="large" color="#FF8A50" />
                 </View>
             ) : (
-                renderEmptyList()
+                renderHistorique()
             )}
         </View>
     );
