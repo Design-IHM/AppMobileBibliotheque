@@ -9,7 +9,14 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 web-build/
-
+.idea/
+.vscode/
+.expo-shared/
+*.iml
+*.log
+*.log.*
+*.log-*
+*.log/*
 # macOS
 .DS_Store
 

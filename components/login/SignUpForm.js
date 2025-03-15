@@ -1,5 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
 import { Timestamp, doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
+import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useState, useEffect } from 'react';
 import { Alert, Dimensions, Image, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -33,42 +34,42 @@ const SignUpForm = ({navigation}) => {
   const [departments, setDepartments] = useState([]);
   const [loadingDepartments, setLoadingDepartments] = useState(true);
 
-  // Récupération des départements depuis Firestore
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        setLoadingDepartments(true);
-        const departmentsCollection = collection(db, 'departements');
-        const departmentsSnapshot = await getDocs(departmentsCollection);
+// Récupération des départements depuis Firestore
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            try {
+                setLoadingDepartments(true);
+                const departmentsCollection = collection(db, 'departements');
+                const departmentsSnapshot = await getDocs(departmentsCollection);
 
-        // Construction du tableau de départements pour le Picker
-        let departmentsList = [{ label: "Sélectionner un département", value: "" }];
-        departmentsSnapshot.forEach(doc => {
-          const departmentData = doc.data();
-          departmentsList.push({
-            label: departmentData.name,
-            value: doc.id
-          });
-        });
+                // Construction du tableau de départements pour le Picker
+                let departmentsList = [{ label: "Sélectionner un département", value: "" }];
+                departmentsSnapshot.forEach(doc => {
+                    const departmentData = doc.data();
+                    departmentsList.push({
+                        label: departmentData.nom, // Utilisez "nom" au lieu de "name"
+                        value: doc.id
+                    });
+                });
 
-        setDepartments(departmentsList);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des départements:", error);
-        // Fallback vers une liste par défaut en cas d'erreur
-        setDepartments([
-          { label: "Sélectionner un département", value: "" },
-          { label: "Génie Civil", value: "genie_civil" },
-          { label: "Génie Informatique", value: "genie_informatique" },
-          { label: "Génie Électrique", value: "genie_electrique" },
-          { label: "Génie Mécanique", value: "genie_mecanique" }
-        ]);
-      } finally {
-        setLoadingDepartments(false);
-      }
-    };
+                setDepartments(departmentsList);
+            } catch (error) {
+                console.error("Erreur lors de la récupération des départements:", error);
+                // Fallback vers une liste par défaut en cas d'erreur
+                setDepartments([
+                    { label: "Sélectionner un département", value: "" },
+                    { label: "Génie Civil", value: "genie_civil" },
+                    { label: "Génie Informatique", value: "genie_informatique" },
+                    { label: "Génie Électrique", value: "genie_electrique" },
+                    { label: "Génie Mécanique", value: "genie_mecanique" }
+                ]);
+            } finally {
+                setLoadingDepartments(false);
+            }
+        };
 
-    fetchDepartments();
-  }, []);
+        fetchDepartments();
+    }, []);
 
   const SignupFormSchema = Yup.object().shape({
     email: Yup.string()
@@ -353,65 +354,69 @@ const SignUpForm = ({navigation}) => {
                     <View style={styles.formSection}>
                       <Text style={styles.sectionTitle}>Informations Académiques</Text>
 
-                      <View style={styles.pickerField}>
-                        <Text style={styles.inputLabel}>Département</Text>
-                        {loadingDepartments ? (
-                            <View style={styles.loadingContainer}>
-                              <ActivityIndicator size="small" color="#FF6600" />
-                              <Text style={styles.loadingText}>Chargement des départements...</Text>
-                            </View>
-                        ) : (
-                            <View style={styles.pickerContainer}>
-                              <Picker
-                                  selectedValue={selectedDepartment}
-                                  onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
-                                  style={styles.picker}
-                                  enabled={!loadingDepartments}
-                                  // Add this to ensure placeholder text is visible
-                                  itemStyle={styles.pickerItem}
-                                  dropdownIconColor="#555"
-                              >
-                                {departments.map((dept, index) => (
-                                    <Picker.Item
-                                        key={index}
-                                        label={dept.label}
-                                        value={dept.value}
-                                        color={dept.value === "" ? "#777" : "#000"}
-                                    />
-                                ))}
-                              </Picker>
-                            </View>
-                        )}
-                        {!selectedDepartment && touched.username && !loadingDepartments && (
-                            <Text style={styles.errorText}>Veuillez sélectionner un département</Text>
-                        )}
-                      </View>
-
-                      <View style={styles.pickerField}>
-                        <Text style={styles.inputLabel}>Niveau</Text>
-                        <View style={styles.pickerContainer}>
-                          <Picker
-                              selectedValue={selectedLevel}
-                              onValueChange={(itemValue) => setSelectedLevel(itemValue)}
-                              style={styles.picker}
-                              // Add this to ensure placeholder text is visible
-                              itemStyle={styles.pickerItem}
-                              dropdownIconColor="#555"
-                          >
-                            {levels.map((level, index) => (
-                                <Picker.Item
-                                    key={index}
-                                    label={level.label}
-                                    value={level.value}
-                                    color={level.value === "" ? "#777" : "#000"}
-                                />
-                            ))}
-                          </Picker>
+                        <View style={styles.pickerField}>
+                            <Text style={styles.inputLabel}>Département</Text>
+                            {loadingDepartments ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="small" color="#FF6600" />
+                                    <Text style={styles.loadingText}>Chargement des départements...</Text>
+                                </View>
+                            ) : (
+                                <View style={styles.customPickerContainer}>
+                                    <Picker
+                                        selectedValue={selectedDepartment}
+                                        onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
+                                        style={styles.picker}
+                                        dropdownIconColor="transparent" // Cacher l'icône native pour utiliser notre propre icône
+                                        mode="dropdown"
+                                    >
+                                        {departments.map((dept, index) => (
+                                            <Picker.Item
+                                                key={index}
+                                                label={dept.label || "Élément sans nom"}
+                                                value={dept.value}
+                                                color={dept.value === "" ? "#777" : "#000"}
+                                            />
+                                        ))}
+                                    </Picker>
+                                    <View style={styles.arrowContainer}>
+                                        <Ionicons name="chevron-down" size={16} color="#555" />
+                                    </View>
+                                </View>
+                            )}
+                            {!selectedDepartment && touched.username && !loadingDepartments && (
+                                <Text style={styles.errorText}>Veuillez sélectionner un département</Text>
+                            )}
                         </View>
-                        {!selectedLevel && touched.username && (
-                            <Text style={styles.errorText}>Veuillez sélectionner un niveau</Text>
-                        )}
-                      </View>
+
+                        {/* Sélection du niveau */}
+                        <View style={styles.pickerField}>
+                            <Text style={styles.inputLabel}>Niveau</Text>
+                            <View style={styles.customPickerContainer}>
+                                <Picker
+                                    selectedValue={selectedLevel}
+                                    onValueChange={(itemValue) => setSelectedLevel(itemValue)}
+                                    style={styles.picker}
+                                    dropdownIconColor="transparent" // Cacher l'icône native pour utiliser notre propre icône
+                                    mode="dropdown"
+                                >
+                                    {levels.map((level, index) => (
+                                        <Picker.Item
+                                            key={index}
+                                            label={level.label}
+                                            value={level.value}
+                                            color={level.value === "" ? "#777" : "#000"}
+                                        />
+                                    ))}
+                                </Picker>
+                                <View style={styles.arrowContainer}>
+                                    <Ionicons name="chevron-down" size={16} color="#555" />
+                                </View>
+                            </View>
+                            {!selectedLevel && touched.username && (
+                                <Text style={styles.errorText}>Veuillez sélectionner un niveau</Text>
+                            )}
+                        </View>
 
                     </View>
 
@@ -625,6 +630,8 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
     color:'#333',
+    width: '100%',
+    paddingHorizontal: 12,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -683,7 +690,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#FF3B30',
     marginTop: 5,
-  }
+  },
+  customPickerContainer: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    backgroundColor: '#FAFAFA',
+    overflow: 'hidden',
+    minHeight: 50,
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  arrowContainer: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    marginTop: -8,
+    zIndex: -1, // S'assurer que l'icône est derrière le Picker pour permettre la sélection
+  },
 });
 
 export default SignUpForm;
