@@ -1,29 +1,52 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Alert, Dimensions, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import Dialog from "react-native-dialog";
-import { doc, onSnapshot, collection, getDoc, writeBatch, increment, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, onSnapshot, collection, getDoc, writeBatch, increment, query, where, getDocs } from "firebase/firestore";
 import { UserContext } from '../../context/UserContext';
 import { db } from '../../../firebaseConfig';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const WIDTH = Dimensions.get('window').width;
 const HEIGHT = Dimensions.get('window').height;
 
+const DEFAULT_IMAGE = require('../../../assets/biblio/math.jpg');
+
 const CathegorieBiblio = ({ cathegorie, donnee }) => {
-    const activeReservations = [
-        { etat: donnee.etat1, details: donnee.tabEtat1, index: 1 },
-        { etat: donnee.etat2, details: donnee.tabEtat2, index: 2 },
-        { etat: donnee.etat3, details: donnee.tabEtat3, index: 3 },
-    ].filter(res => res.etat === 'reserv');
+
+    const activeReservations = [];
+
+    // Parcourir toutes les propriétés de l'objet donnee
+    Object.keys(donnee).forEach(key => {
+        if (key.startsWith('etat') && donnee[key] === 'reserv') {
+            const index = key.slice(4);
+            const detailsKey = `tabEtat${index}`;
+
+            // Vérifier si les détails correspondants existent
+            if (donnee[detailsKey] && Array.isArray(donnee[detailsKey])) {
+                activeReservations.push({
+                    etat: donnee[key],
+                    details: donnee[detailsKey],
+                    index: index
+                });
+            }
+        }
+    });
 
     return (
         <View style={styles.categoryContainer}>
-            <View style={styles.categoryHeader}>
+            <LinearGradient
+                colors={['#ff6600', '#fff']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.categoryHeader}
+            >
                 <Text style={styles.categoryTitle}>{cathegorie}</Text>
-            </View>
+            </LinearGradient>
             <View style={styles.reservationsContainer}>
-                {activeReservations.map((reservation, index) => (
+                {activeReservations.map((reservation, idx) => (
                     <Cadre
-                        key={index}
+                        key={idx}
                         name={reservation.details[0]}
                         cathegorie={reservation.details[1]}
                         image={reservation.details[2]}
@@ -35,44 +58,6 @@ const CathegorieBiblio = ({ cathegorie, donnee }) => {
                 ))}
             </View>
         </View>
-    );
-}
-
-const CathegorieBiblio1 = ({ cathegorie, currentUser, donnee }) => {
-    const [biblioData1, setBiblioData1] = useState([]);
-    const [biblioLoader1, setBiblioLoader1] = useState(true);
-
-    useEffect(() => {
-        if (!db) return;
-
-        const biblioRef = collection(db, 'Biblio');
-        const unsubscribe = onSnapshot(biblioRef, (querySnapshot) => {
-            const items = [];
-            querySnapshot.forEach((doc) => {
-                items.push(doc.data());
-            });
-            setBiblioData1(items);
-            setBiblioLoader1(false);
-        }, (error) => {
-            console.error("Erreur lors de la récupération des données:", error);
-            setBiblioLoader1(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    return (
-        <SafeAreaView>
-            <ScrollView>
-                {biblioLoader1 ? (
-                    <ActivityIndicator size="large" color="#00ff00" />
-                ) : (
-                    <View style={{ backgroundColor: '#C8C8C8', justifyContent: 'space-between', flexDirection: 'row' }}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'black', margin: 10, fontFamily: 'Roboto' }}>{cathegorie}</Text>
-                    </View>
-                )}
-            </ScrollView>
-        </SafeAreaView>
     );
 }
 
@@ -105,31 +90,26 @@ const Panier = (props) => {
     }, [currentUserdata?.email]);
 
     const hasActiveReservations = (data) => {
-        return [data.etat1, data.etat2, data.etat3].some(etat => etat === 'reserv');
-    };
-
-    const hasEmprunts = (data) => {
-        return [data.etat1, data.etat2, data.etat3].some(etat => etat === 'emprunt');
+        // Vérifier dynamiquement si l'utilisateur a des réservations actives
+        if (!data) return false;
+        return Object.keys(data).some(key => key.startsWith('etat') && data[key] === 'reserv');
     };
 
     return (
-        <ScrollView>
+        <ScrollView style={styles.container}>
             {panierLoader ? (
-                <ActivityIndicator size="large" color="#00ff00" />
+                <View style={styles.loaderContainer}>
+                    <ActivityIndicator size="large" color="#00ff00" />
+                </View>
             ) : (
                 <View>
                     {hasActiveReservations(dat) ? (
-                        <CathegorieBiblio donnee={dat} cathegorie='Reservation' />
+                        <CathegorieBiblio donnee={dat} cathegorie='Mes Réservations' />
                     ) : (
-                        <View>
-                            <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 28, fontFamily: 'Roboto' }}>0 RESERVATION</Text>
-                        </View>
-                    )}
-                    {hasEmprunts(dat) ? (
-                        <CathegorieBiblio1 donnee={dat} cathegorie='emprunt' currentUser={currentUserdata?.email} />
-                    ) : (
-                        <View>
-                            <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 28, fontFamily: 'Roboto', marginTop: 50 }}></Text>
+                        <View style={styles.emptyCart}>
+                            <MaterialIcons name="shopping-basket" size={80} color="#00ff00" />
+                            <Text style={styles.emptyCartText}>Aucune réservation</Text>
+                            <Text style={styles.emptyCartSubtext}>Votre panier de réservation est vide</Text>
                         </View>
                     )}
                 </View>
@@ -155,10 +135,9 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
         minute: '2-digit'
     });
 
-    const defaultImage = require('../../../assets/biblio/math.jpg');
-    const imageSource = !image || imageError ? defaultImage : { uri: image };
+    // Utiliser la constante définie au niveau du module pour l'image par défaut
+    const imageSource = !image || imageError ? DEFAULT_IMAGE : { uri: image };
 
-   
     const annulerReservation = async (etatIndex) => {
         if (!currentUserdata?.email) {
             Alert.alert('Erreur', 'Vous devez être connecté pour annuler une réservation');
@@ -184,14 +163,14 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
 
             // Récupérer les informations du livre réservé
             const livreReserve = userData[`tabEtat${etatIndex}`];
-            
+
             if (!livreReserve || livreReserve.length < 5) {
                 Alert.alert('Erreur', 'Données de réservation incomplètes');
                 return;
             }
-            
-            const nomLivre = livreReserve[0];       // Nom du livre
-            const collectionName = livreReserve[4]; // Collection du livre
+
+            const nomLivre = livreReserve[0];
+            const collectionName = livreReserve[4];
 
             console.log('Nom du livre:', nomLivre);
             console.log('Collection:', collectionName);
@@ -204,7 +183,7 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
 
             // Mettre à jour les données utilisateur
             const batch = writeBatch(db);
-            
+
             // Réinitialiser l'état et le tableau de réservation de l'utilisateur
             batch.update(userRef, {
                 [`etat${etatIndex}`]: 'ras',
@@ -215,11 +194,11 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
             const livresRef = collection(db, collectionName);
             const q = query(livresRef, where("name", "==", nomLivre));
             const querySnapshot = await getDocs(q);
-            
+
             if (!querySnapshot.empty) {
                 // Livre trouvé par requête
                 const livreDoc = querySnapshot.docs[0];
-                
+
                 // Incrémenter le nombre d'exemplaires disponibles
                 batch.update(livreDoc.ref, {
                     exemplaire: increment(1)
@@ -228,7 +207,7 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
                 console.log(`Aucun livre trouvé avec le nom "${nomLivre}" dans la collection "${collectionName}"`);
                 // Continuer quand même pour au moins libérer la réservation
             }
-            
+
             await batch.commit();
             Alert.alert('Succès', 'Réservation annulée avec succès');
 
@@ -236,39 +215,42 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
             console.error('Erreur lors de l\'annulation de la réservation:', error);
             Alert.alert('Erreur', `Une erreur est survenue: ${error.message}`);
         }
-    }; 
+    };
 
     return (
         <View style={styles.cardContainer}>
             <View style={styles.card}>
-                <Image
-                    source={imageSource}
-                    style={styles.cardImage}
-                    onError={() => setImageError(true)}
-                    defaultSource={defaultImage}
-                />
+                <View style={styles.imageContainer}>
+                    <Image
+                        source={imageSource}
+                        style={styles.cardImage}
+                        onError={() => setImageError(true)}
+                    />
+                </View>
                 <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={2}>{name}</Text>
                     <Text style={styles.cardCategory}>{cathegorie}</Text>
-                    <Text style={styles.cardDate}>{date}</Text>
-                    <Text style={styles.cardTime}>{heure}</Text>
+                    <View style={styles.dateTimeContainer}>
+                        <Text style={styles.cardDate}>{date}</Text>
+                        <Text style={styles.cardTime}>{heure}</Text>
+                    </View>
                     <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={() => setShowDialog(true)}
                     >
-                        <Text style={styles.deleteButtonText}>Supprimer</Text>
+                        <Text style={styles.deleteButtonText}>Annuler la réservation</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             <Dialog.Container visible={showDialog}>
-                <Dialog.Title>Confirmer la suppression</Dialog.Title>
+                <Dialog.Title>Confirmer l'annulation</Dialog.Title>
                 <Dialog.Description>
-                    Voulez-vous vraiment supprimer cette réservation ?
+                    Voulez-vous vraiment annuler cette réservation ?
                 </Dialog.Description>
-                <Dialog.Button label="Annuler" onPress={() => setShowDialog(false)} />
+                <Dialog.Button label="Non" onPress={() => setShowDialog(false)} />
                 <Dialog.Button
-                    label="Supprimer"
+                    label="Oui, annuler"
                     onPress={() => {
                         setShowDialog(false);
                         annulerReservation(etatIndex);
@@ -279,85 +261,137 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
     );
 };
 
-
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f9f9f9',
+    },
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: HEIGHT * 0.5,
+    },
     categoryContainer: {
         marginBottom: 20,
-        backgroundColor: '#f5f5f5'
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginHorizontal: 12,
+        marginTop: 12,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     categoryHeader: {
-        backgroundColor: '#C8C8C8',
-        padding: 10,
-        marginBottom: 10
+        padding: 16,
     },
     categoryTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: 'black',
-        fontFamily: 'Roboto'
+        color: '#ffffff',
+        fontFamily: 'Roboto',
+        letterSpacing: 0.5,
     },
     reservationsContainer: {
-        paddingHorizontal: 10
+        padding: 12,
     },
     cardContainer: {
-        padding: 10,
-        backgroundColor: '#fff'
+        marginBottom: 16,
     },
     card: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 10,
-        marginBottom: 10,
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 12,
         elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+    },
+    imageContainer: {
+        borderRadius: 8,
     },
     cardImage: {
         width: 100,
         height: 150,
-        borderRadius: 5,
+        borderRadius: 8,
     },
     cardContent: {
         flex: 1,
-        marginLeft: 10,
+        marginLeft: 16,
         justifyContent: 'space-between'
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: 5,
+        marginBottom: 6,
+        color: '#333333',
+        fontFamily: 'Roboto',
     },
     cardCategory: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 5,
+        fontSize: 15,
+        color: '#555555',
+        marginBottom: 8,
+        fontFamily: 'Roboto',
+    },
+    dateTimeContainer: {
+        backgroundColor: '#f5f5f5',
+        padding: 8,
+        borderRadius: 6,
+        marginBottom: 10,
     },
     cardDate: {
         fontSize: 14,
-        color: '#444',
+        color: '#444444',
         marginBottom: 2,
-        fontStyle: 'italic'
+        fontFamily: 'Roboto',
     },
     cardTime: {
         fontSize: 14,
-        color: '#444',
-        marginBottom: 10,
-        fontStyle: 'italic'
+        color: '#444444',
+        fontFamily: 'Roboto',
+        fontWeight: 'bold',
     },
     deleteButton: {
         backgroundColor: '#ff4444',
-        padding: 8,
-        borderRadius: 5,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
         alignItems: 'center',
-        marginTop: 'auto'
+        marginTop: 'auto',
+        elevation: 2,
     },
     deleteButtonText: {
-        color: '#fff',
-        fontWeight: 'bold'
-    }
+        color: '#ffffff',
+        fontWeight: 'bold',
+        fontSize: 14,
+        fontFamily: 'Roboto',
+    },
+    emptyCart: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 30,
+        height: HEIGHT * 0.7,
+    },
+    emptyCartText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333333',
+        marginBottom: 10,
+        fontFamily: 'Roboto',
+    },
+    emptyCartSubtext: {
+        fontSize: 16,
+        color: '#666666',
+        textAlign: 'center',
+        fontFamily: 'Roboto',
+    },
 });
 
 export default Panier;
