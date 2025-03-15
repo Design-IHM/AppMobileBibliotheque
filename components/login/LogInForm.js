@@ -317,62 +317,6 @@ const LoginForm = ({navigation}) => {
                         )}
                       </TouchableOpacity>
 
-                      <View style={styles.divider}>
-                        <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>ou</Text>
-                        <View style={styles.dividerLine} />
-                      </View>
-
-                      <View style={styles.socialIconsContainer}>
-                        <TouchableOpacity
-                            style={styles.socialIconButton}
-                            onPress={() => handleSocialLogin('google')}
-                        >
-                          <LinearGradient
-                              colors={['#DB4437', '#EA4335']}
-                              style={styles.socialIconGradient}
-                          >
-                            <FontAwesomeIcon name="google" size={22} color="#FFFFFF" />
-                          </LinearGradient>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.socialIconButton}
-                            onPress={() => handleSocialLogin('facebook')}
-                        >
-                          <LinearGradient
-                              colors={['#4267B2', '#3B5998']}
-                              style={styles.socialIconGradient}
-                          >
-                            <FontAwesomeIcon name="facebook" size={22} color="#FFFFFF" />
-                          </LinearGradient>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.socialIconButton}
-                            onPress={() => handleSocialLogin('twitter')}
-                        >
-                          <LinearGradient
-                              colors={['#1DA1F2', '#0084B4']}
-                              style={styles.socialIconGradient}
-                          >
-                            <FontAwesomeIcon name="twitter" size={22} color="#FFFFFF" />
-                          </LinearGradient>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.socialIconButton}
-                            onPress={() => handleSocialLogin('instagram')}
-                        >
-                          <LinearGradient
-                              colors={['#C13584', '#E1306C']}
-                              style={styles.socialIconGradient}
-                          >
-                            <FontAwesomeIcon name="instagram" size={22} color="#FFFFFF" />
-                          </LinearGradient>
-                        </TouchableOpacity>
-                      </View>
-
                       <View style={styles.signupContainer}>
                         <Text style={styles.signupText}>Nouveau sur la plateforme? </Text>
                         <TouchableOpacity onPress={() => navigation.push('SignUpScreen')}>
