@@ -1,121 +1,187 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../config';
+import { UserContext } from '../context/UserContext';
 
 export default function Notifications({ navigation }) {
+    const { currentUserNewNav } = useContext(UserContext);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedNotification, setSelectedNotification] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         fetchNotifications();
-    }, []);
+    }, [currentUserNewNav?.email]);
 
-    const fetchNotifications = async () => {
-        try {
-            // Pour l'exemple, on va créer des notifications fictives
-            // Dans une vraie application, vous récupéreriez les données depuis Firestore
-            const mockNotifications = [
-                {
-                    id: '1',
-                    title: 'Rappel de retour',
-                    message: 'Votre livre "Introduction à l\'algorithme" doit être rendu demain',
-                    date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 heures avant
-                    read: false,
-                    type: 'reminder'
-                },
-                {
-                    id: '2',
-                    title: 'Nouveau livre disponible',
-                    message: 'Un nouveau livre que vous pourriez aimer est disponible: "Machine Learning avancé"',
-                    date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 jour avant
-                    read: true,
-                    type: 'new_book'
-                },
-                {
-                    id: '3',
-                    title: 'Offre spéciale',
-                    message: 'Accès gratuit à la section Mathématiques avancées pendant une semaine!',
-                    date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 jours avant
-                    read: true,
-                    type: 'promotion'
-                }
-            ];
-
-            setNotifications(mockNotifications);
+    const fetchNotifications = () => {
+        if (!currentUserNewNav?.email) {
             setLoading(false);
+            return;
+        }
+
+        try {
+            const userRef = doc(db, 'BiblioUser', currentUserNewNav.email);
+            const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const userData = docSnapshot.data();
+                    const userNotifications = userData.notifications || [];
+
+                    // Trier par date (plus récent en premier)
+                    const sortedNotifications = userNotifications.sort((a, b) => {
+                        const dateA = a.date?.seconds ? new Date(a.date.seconds * 1000) : new Date(a.date);
+                        const dateB = b.date?.seconds ? new Date(b.date.seconds * 1000) : new Date(b.date);
+                        return dateB - dateA;
+                    });
+
+                    console.log(`${sortedNotifications.length} notifications trouvées`);
+                    setNotifications(sortedNotifications);
+                } else {
+                    setNotifications([]);
+                }
+                setLoading(false);
+            }, (error) => {
+                console.error('Erreur lors de la récupération des notifications:', error);
+                setLoading(false);
+            });
+
+            return () => unsubscribe();
         } catch (error) {
-            console.error('Erreur lors de la récupération des notifications:', error);
+            console.error('Erreur lors de l\'initialisation:', error);
             setLoading(false);
         }
     };
 
     const markAllAsRead = async () => {
+        if (!currentUserNewNav?.email || notifications.length === 0) return;
+
         try {
             setLoading(true);
+            const userRef = doc(db, 'BiblioUser', currentUserNewNav.email);
 
-            // Mettre à jour les notifications localement
+            // Marquer toutes les notifications comme lues
             const updatedNotifications = notifications.map(notification => ({
                 ...notification,
                 read: true
             }));
 
-            setNotifications(updatedNotifications);
+            await updateDoc(userRef, {
+                notifications: updatedNotifications
+            });
 
-            // Dans une vraie application, vous mettriez à jour ces données dans Firestore
-
-            setLoading(false);
+            Alert.alert('Succès', 'Toutes les notifications ont été marquées comme lues');
         } catch (error) {
             console.error('Erreur lors du marquage des notifications:', error);
+            Alert.alert('Erreur', 'Impossible de marquer les notifications comme lues');
+        } finally {
             setLoading(false);
         }
     };
 
     const markAsRead = async (notificationId) => {
+        if (!currentUserNewNav?.email) return;
+
         try {
-            // Mise à jour locale
+            const userRef = doc(db, 'BiblioUser', currentUserNewNav.email);
+
+            // Trouver et mettre à jour la notification spécifique
             const updatedNotifications = notifications.map(notification =>
                 notification.id === notificationId
                     ? { ...notification, read: true }
                     : notification
             );
 
-            setNotifications(updatedNotifications);
-
-            // Dans une vraie application, vous mettriez à jour cette donnée dans Firestore
+            await updateDoc(userRef, {
+                notifications: updatedNotifications
+            });
         } catch (error) {
             console.error('Erreur lors du marquage de la notification:', error);
         }
     };
 
+    const deleteNotification = async (notificationToDelete) => {
+        if (!currentUserNewNav?.email) return;
+
+        Alert.alert(
+            'Supprimer la notification',
+            'Voulez-vous vraiment supprimer cette notification ?',
+            [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                    text: 'Supprimer',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const userRef = doc(db, 'BiblioUser', currentUserNewNav.email);
+                            await updateDoc(userRef, {
+                                notifications: arrayRemove(notificationToDelete)
+                            });
+                            Alert.alert('Succès', 'Notification supprimée');
+                        } catch (error) {
+                            console.error('Erreur lors de la suppression:', error);
+                            Alert.alert('Erreur', 'Impossible de supprimer la notification');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const openNotificationModal = (notification) => {
+        setSelectedNotification(notification);
+        setModalVisible(true);
+
+        // Marquer comme lue automatiquement
+        if (!notification.read) {
+            markAsRead(notification.id);
+        }
+    };
+
     const getNotificationIcon = (type) => {
         switch (type) {
-            case 'reminder':
-                return <Ionicons name="time-outline" size={24} color="#FF9500" />;
-            case 'new_book':
+            case 'reservation':
+                return <Ionicons name="bookmark-outline" size={24} color="#FF8A50" />;
+            case 'emprunt':
                 return <Ionicons name="book-outline" size={24} color="#30B0C7" />;
-            case 'promotion':
-                return <Ionicons name="gift-outline" size={24} color="#FF2D55" />;
+            case 'retour':
+                return <Ionicons name="checkmark-circle-outline" size={24} color="#34C759" />;
+            case 'annulation':
+                return <Ionicons name="close-circle-outline" size={24} color="#FF3B30" />;
+            case 'rappel':
+                return <Ionicons name="time-outline" size={24} color="#FF9500" />;
+            case 'nouveau_livre':
+                return <Ionicons name="library-outline" size={24} color="#5856D6" />;
             default:
                 return <Ionicons name="notifications-outline" size={24} color="#8E8E93" />;
         }
     };
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
+    const formatDate = (dateInput) => {
+        let date;
+        if (dateInput?.seconds) {
+            date = new Date(dateInput.seconds * 1000);
+        } else {
+            date = new Date(dateInput);
+        }
+
         const now = new Date();
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / (1000 * 60));
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffMins < 60) {
+        if (diffMins < 1) {
+            return 'À l\'instant';
+        } else if (diffMins < 60) {
             return `Il y a ${diffMins} minute${diffMins > 1 ? 's' : ''}`;
         } else if (diffHours < 24) {
             return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
-        } else {
+        } else if (diffDays < 7) {
             return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+        } else {
+            return date.toLocaleDateString('fr-FR');
         }
     };
 
@@ -127,30 +193,108 @@ export default function Notifications({ navigation }) {
         </View>
     );
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={[styles.notificationItem, item.read ? {} : styles.unreadItem]}
-            onPress={() => markAsRead(item.id)}
+    const renderItem = ({ item }) => {
+        const isLongMessage = item.message && item.message.length > 100;
+        const displayMessage = isLongMessage ? `${item.message.slice(0, 100)}...` : item.message;
+
+        return (
+            <TouchableOpacity
+                style={[styles.notificationItem, item.read ? {} : styles.unreadItem]}
+                onPress={() => openNotificationModal(item)}
+            >
+                <View style={[styles.iconContainer, { backgroundColor: item.read ? '#F2F2F7' : '#E5F3FF' }]}>
+                    {getNotificationIcon(item.type)}
+                </View>
+                <View style={styles.notificationContent}>
+                    <Text style={[styles.notificationTitle, item.read ? {} : styles.unreadText]}>
+                        {item.title}
+                    </Text>
+                    <Text style={styles.notificationMessage} numberOfLines={isLongMessage ? 3 : 2}>
+                        {displayMessage}
+                    </Text>
+                    {isLongMessage && (
+                        <Text style={styles.seeMoreText}>Appuyer pour voir plus</Text>
+                    )}
+                    <Text style={styles.notificationDate}>
+                        {formatDate(item.date)}
+                    </Text>
+                </View>
+                <View style={styles.notificationActions}>
+                    {!item.read && (
+                        <View style={styles.unreadDot} />
+                    )}
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(item);
+                        }}
+                    >
+                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const renderNotificationModal = () => (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
         >
-            <View style={[styles.iconContainer, { backgroundColor: item.read ? '#F2F2F7' : '#E5F3FF' }]}>
-                {getNotificationIcon(item.type)}
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{selectedNotification?.title}</Text>
+                        <TouchableOpacity
+                            style={styles.modalCloseButton}
+                            onPress={() => setModalVisible(false)}
+                        >
+                            <Ionicons name="close" size={24} color="#8E8E93" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={styles.modalBody}>
+                        <View style={styles.modalIconContainer}>
+                            {getNotificationIcon(selectedNotification?.type)}
+                        </View>
+
+                        <Text style={styles.modalMessage}>
+                            {selectedNotification?.message}
+                        </Text>
+
+                        <Text style={styles.modalDate}>
+                            {selectedNotification?.date && formatDate(selectedNotification.date)}
+                        </Text>
+                    </ScrollView>
+
+                    <View style={styles.modalFooter}>
+                        <TouchableOpacity
+                            style={styles.modalDeleteButton}
+                            onPress={() => {
+                                setModalVisible(false);
+                                deleteNotification(selectedNotification);
+                            }}
+                        >
+                            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                            <Text style={styles.modalDeleteText}>Supprimer</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.modalCloseBtn}
+                            onPress={() => setModalVisible(false)}
+                        >
+                            <Text style={styles.modalCloseBtnText}>Fermer</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
-            <View style={styles.notificationContent}>
-                <Text style={[styles.notificationTitle, item.read ? {} : styles.unreadText]}>
-                    {item.title}
-                </Text>
-                <Text style={styles.notificationMessage} numberOfLines={2}>
-                    {item.message}
-                </Text>
-                <Text style={styles.notificationDate}>
-                    {formatDate(item.date)}
-                </Text>
-            </View>
-            {!item.read && (
-                <View style={styles.unreadDot} />
-            )}
-        </TouchableOpacity>
+        </Modal>
     );
+
+    const unreadCount = notifications.filter(n => !n.read).length;
 
     return (
         <View style={styles.container}>
@@ -159,9 +303,9 @@ export default function Notifications({ navigation }) {
                     <Ionicons name="arrow-back" size={24} color="#FF8A50" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                {notifications.some(n => !n.read) && (
+                {unreadCount > 0 && (
                     <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
-                        <Text style={styles.markAllText}>Tout marquer comme lu</Text>
+                        <Text style={styles.markAllText}>Tout marquer</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -173,12 +317,14 @@ export default function Notifications({ navigation }) {
             ) : (
                 <FlatList
                     data={notifications}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item, index) => item.id || index.toString()}
                     renderItem={renderItem}
                     ListEmptyComponent={renderEmptyList}
                     contentContainerStyle={notifications.length === 0 ? { flex: 1 } : {}}
                 />
             )}
+
+            {renderNotificationModal()}
         </View>
     );
 }
@@ -243,10 +389,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#F2F2F7',
-        position: 'relative',
+        alignItems: 'flex-start',
     },
     unreadItem: {
-        backgroundColor: '#FAFAFE',
+        backgroundColor: '#F8F9FF',
     },
     iconContainer: {
         width: 40,
@@ -255,10 +401,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
+        marginTop: 4,
     },
     notificationContent: {
         flex: 1,
-        paddingRight: 16,
+        paddingRight: 8,
     },
     notificationTitle: {
         fontSize: 16,
@@ -273,18 +420,111 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666666',
         marginBottom: 6,
+        lineHeight: 20,
+    },
+    seeMoreText: {
+        fontSize: 12,
+        color: '#FF8A50',
+        fontStyle: 'italic',
+        marginBottom: 4,
     },
     notificationDate: {
         fontSize: 12,
         color: '#8E8E93',
     },
+    notificationActions: {
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingTop: 4,
+    },
     unreadDot: {
-        position: 'absolute',
-        right: 16,
-        top: 18,
         width: 10,
         height: 10,
         borderRadius: 5,
         backgroundColor: '#FF8A50',
+        marginBottom: 8,
+    },
+    deleteButton: {
+        padding: 8,
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        width: '90%',
+        maxHeight: '80%',
+        overflow: 'hidden',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F7',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000000',
+        flex: 1,
+    },
+    modalCloseButton: {
+        padding: 4,
+    },
+    modalBody: {
+        padding: 16,
+        maxHeight: 400,
+    },
+    modalIconContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    modalMessage: {
+        fontSize: 16,
+        color: '#333333',
+        lineHeight: 24,
+        marginBottom: 16,
+    },
+    modalDate: {
+        fontSize: 14,
+        color: '#8E8E93',
+        textAlign: 'center',
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F2F2F7',
+    },
+    modalDeleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF3B3020',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    modalDeleteText: {
+        color: '#FF3B30',
+        marginLeft: 4,
+        fontWeight: '500',
+    },
+    modalCloseBtn: {
+        backgroundColor: '#FF8A50',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    modalCloseBtnText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
     },
 });

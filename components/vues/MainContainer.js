@@ -4,11 +4,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../../config'
-import { collection, getDocs, doc, updateDoc, query, where, limit } from 'firebase/firestore'
-
-// Créer un seul contexte utilisateur (suppression du doublon)
-export const UserContext = createContext()
-
+import { collection, getDocs, doc, updateDoc, query, where, limit, onSnapshot } from 'firebase/firestore'
+import { UserContext } from '../context/UserContext';
+import { useCartCount } from '../utils/cart';
+import { useUnreadChatCount } from '../utils/chat';
 import SearchModal from '../composants/SearchModal';
 
 //Screens
@@ -49,10 +48,19 @@ const WIDTH = Dimensions.get('window').width
 
 const Tab = createBottomTabNavigator();
 
-// Suppression du doublon de contexte
-// Utilisation du UserContext défini plus haut
-
 const MainContainer = ({ navigation, route }) => {
+  const { emailHigh, currentUserNewNav } = useContext(UserContext);
+  const cartCount = useCartCount(currentUserNewNav?.email);
+  const [modal, setModal] = useState(false);
+  const [datUser1, setDatUser1] = useState(route.params?.datUser || null);
+  const [VuePartCours, setPartVueCours] = useState("");
+  const [signalMain, setSignalMain] = useState(false)
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [data, setData] = useState([]);
+  const [loader, setLoader] = useState(true);
+  const unreadChatCount = useUnreadChatCount(currentUserNewNav?.email);
+
+
   const screenOptions = ({ route }) => ({
     tabBarIcon: ({ focused, color, size }) => {
       let iconName;
@@ -74,8 +82,22 @@ const MainContainer = ({ navigation, route }) => {
           break;
       }
 
-      return <Ionicons name={iconName} size={size} color={color}/>;
-    }
+      // Ajouter le badge pour l'onglet Messages
+      if (route.name === 'Messages' && unreadChatCount > 0) {
+        return (
+            <View style={styles.tabIconContainer}>
+              <Ionicons name={iconName} size={size} color={color} />
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{unreadChatCount}</Text>
+              </View>
+            </View>
+        );
+      }
+
+      return <Ionicons name={iconName} size={size} color={color} />;
+    },
+    tabBarActiveTintColor: '#FF8A50',
+    tabBarInactiveTintColor: 'gray',
   });
 
   const voirMessage = () => {
@@ -88,19 +110,10 @@ const MainContainer = ({ navigation, route }) => {
     });
   };
 
-  const [modal, setModal] = useState(false);
-  const [datUser1, setDatUser1] = useState(route.params?.datUser || null);
-  const [VuePartCours, setPartVueCours] = useState("");
-  const [signalMain, setSignalMain] = useState(false)
-  const [searchModalVisible, setSearchModalVisible] = useState(false);
-
   function lire() {
     setSignalMain(true)
     navigation.navigate('Email')
   }
-
-  const [data, setData] = useState([]);
-  const [loader, setLoader] = useState(true);
 
   const getData = async () => {
     try {
@@ -136,108 +149,118 @@ const MainContainer = ({ navigation, route }) => {
   };
 
   return (
-      <UserContext.Provider value={{ VuePartCours, setPartVueCours, modal, setModal, signalMain, setSignalMain, datUser1 }}>
-        <React.Fragment>
-          <Tab.Navigator
-              initialRouteName={homeName}
-              screenOptions={({ route }) => ({
-                tabBarIcon: ({ focused, color, size }) => {
-                  let iconName;
-                  let rn = route.name;
+      <React.Fragment>
+        <Tab.Navigator
+            initialRouteName={homeName}
+            screenOptions={({ route }) => ({
+              tabBarIcon: ({ focused, color, size }) => {
+                let iconName;
+                let rn = route.name;
 
-                  if (rn === homeName) {
-                    iconName = focused ? 'home' : 'home-outline';
-                  } else if (rn === detailsName) {
-                    iconName = focused ? 'cog' : 'cog-outline';
-                  } else if (rn === settingsName) {
-                    iconName = focused ? 'book' : 'book-outline';
-                  } else if (rn === search) {
-                    iconName = focused ? 'search' : 'search-outline';
-                  } else if(rn === messagesName) {
-                    iconName = focused ? 'chatbubble' : 'chatbubble-outline';
-                  }
-                  return <Ionicons name={iconName} size={size} color={color} />;
-                },
-                tabBarActiveTintColor: '#FF8A50',
-                tabBarInactiveTintColor: 'gray',
-              })}
-          >
-            {!signalMain ? (
-                <Tab.Screen
-                    name={homeName}
-                    component={NavShop}
-                    options={{
-                      headerTitle: (props) => (
-                          <SafeAreaView>
-                            <View style={styles.headerContainer}>
-                              <View style={styles.logoContainer}>
-                                <Image
-                                    style={styles.logo}
-                                    source={require('../../assets/enspy.jpg')}
-                                />
-                                <Text style={styles.title}>BIBLIO ENSPY</Text>
-                              </View>
-                              <TouchableOpacity onPress={handlePress}>
-                                <FontAwesome name="google" size={24} color="blue" />
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
-                                <Ionicons name="search-outline" size={24} color="black" />
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
-                                <Ionicons name="cart-outline" size={24} color="black" />
-                              </TouchableOpacity>
+                if (rn === homeName) {
+                  iconName = focused ? 'home' : 'home-outline';
+                } else if (rn === detailsName) {
+                  iconName = focused ? 'cog' : 'cog-outline';
+                } else if (rn === settingsName) {
+                  iconName = focused ? 'book' : 'book-outline';
+                } else if (rn === search) {
+                  iconName = focused ? 'search' : 'search-outline';
+                } else if(rn === messagesName) {
+                  iconName = focused ? 'chatbubble' : 'chatbubble-outline';
+                }
+                return <Ionicons name={iconName} size={size} color={color} />;
+              },
+              tabBarActiveTintColor: '#FF8A50',
+              tabBarInactiveTintColor: 'gray',
+            })}
+        >
+          {!signalMain ? (
+              <Tab.Screen
+                  name={homeName}
+                  component={NavShop}
+                  options={{
+                    headerTitle: (props) => (
+                        <SafeAreaView>
+                          <View style={styles.headerContainer}>
+                            <View style={styles.logoContainer}>
+                              <Image
+                                  style={styles.logo}
+                                  source={require('../../assets/enspy.jpg')}
+                              />
+                              <Text style={styles.title}>BIBLIO ENSPY</Text>
                             </View>
-                          </SafeAreaView>
-                      ),
-                      headerTitleAlign: 'center',
-                      headerTitleStyle: { flex: 1, textAlign: 'center' },
-                    }}
-                />
-            ) : (
-                <Tab.Screen
-                    name={homeName}
-                    component={NavShop}
-                    options={{
-                      headerTitle: (props) => (
-                          <SafeAreaView>
-                            <View style={styles.headerContainer}>
-                              <View style={styles.logoContainer}>
-                                <Image
-                                    style={styles.logo}
-                                    source={require('../../assets/enspy.jpg')}
-                                />
-                                <Text style={styles.title}>E N S P Y</Text>
-                              </View>
-                              <TouchableOpacity onPress={handlePress}>
-                                <FontAwesome name="google" size={24} color="blue" />
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
-                                <Ionicons name="search-outline" size={24} color="black" />
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => navigation.navigate('Panier')}>
-                                <Ionicons name="cart-outline" size={24} color="black" />
-                              </TouchableOpacity>
+                            <TouchableOpacity onPress={handlePress}>
+                              <FontAwesome name="google" size={24} color="blue" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
+                              <Ionicons name="search-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => navigation.navigate('Panier')} style={styles.cartButton}>
+                              <Ionicons name="cart-outline" size={24} color="black" />
+                              {cartCount > 0 && (
+                                  <View style={styles.cartBadge}>
+                                    <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                                  </View>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </SafeAreaView>
+                    ),
+                    headerTitleAlign: 'center',
+                    headerTitleStyle: { flex: 1, textAlign: 'center' },
+                  }}
+              />
+          ) : (
+              <Tab.Screen
+                  name={homeName}
+                  component={NavShop}
+                  options={{
+                    headerTitle: (props) => (
+                        <SafeAreaView>
+                          <View style={styles.headerContainer}>
+                            <View style={styles.logoContainer}>
+                              <Image
+                                  style={styles.logo}
+                                  source={require('../../assets/enspy.jpg')}
+                              />
+                              <Text style={styles.title}>E N S P Y</Text>
                             </View>
-                          </SafeAreaView>
-                      ),
-                      headerTitleAlign: 'center',
-                      headerTitleStyle: { flex: 1, textAlign: 'center' },
-                    }}
-                />
-            )}
-            <Tab.Screen name={settingsName} component={NavOpenClass} />
-            <Tab.Screen name={messagesName} component={Email} />
-            <Tab.Screen name={detailsName} component={NavParams} />
-          </Tab.Navigator>
+                            <TouchableOpacity onPress={handlePress}>
+                              <FontAwesome name="google" size={24} color="blue" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
+                              <Ionicons name="search-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Panier')}
+                                style={styles.cartIconContainer}
+                            >
+                              <Ionicons name="cart-outline" size={24} color="black" />
+                              {cartCount > 0 && (
+                                  <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>{cartCount}</Text>
+                                  </View>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </SafeAreaView>
+                    ),
+                    headerTitleAlign: 'center',
+                    headerTitleStyle: { flex: 1, textAlign: 'center' },
+                  }}
+              />
+          )}
+          <Tab.Screen name={settingsName} component={NavOpenClass} />
+          <Tab.Screen name={messagesName} component={Email} />
+          <Tab.Screen name={detailsName} component={NavParams} />
+        </Tab.Navigator>
 
-          <SearchModal
-              visible={searchModalVisible}
-              onClose={() => setSearchModalVisible(false)}
-              navigation={navigation}
-          />
-
-        </React.Fragment>
-      </UserContext.Provider>
+        <SearchModal
+            visible={searchModalVisible}
+            onClose={() => setSearchModalVisible(false)}
+            navigation={navigation}
+        />
+      </React.Fragment>
   );
 }
 
@@ -285,6 +308,72 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginRight: 15,
     opacity: 0.5,
+  },
+  // Styles pour le badge du panier dans le header
+  cartButton: {
+    position: 'relative',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  // Styles pour les badges sur les onglets
+  tabIconContainer: {
+    position: 'relative',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  tabBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  // Garder tes anciens styles pour compatibilité
+  cartIconContainer: {
+    position: 'relative',
+    padding: 5,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

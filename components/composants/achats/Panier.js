@@ -6,6 +6,7 @@ import { UserContext } from '../../context/UserContext';
 import { db } from '../../../firebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import { addNotification, NOTIFICATION_TYPES } from '../../utils/addNotification';
 
 const WIDTH = Dimensions.get('window').width;
 const HEIGHT = Dimensions.get('window').height;
@@ -209,6 +210,14 @@ const Cadre = ({ cathegorie, desc, exemplaire, image, name, matricule, cathegori
             }
 
             await batch.commit();
+
+            await addNotification(
+                currentUserdata.email,
+                NOTIFICATION_TYPES.ANNULATION,
+                'Réservation annulée',
+                `Votre réservation pour "${nomLivre}" a été annulée avec succès.`
+            );
+
             Alert.alert('Succès', 'Réservation annulée avec succès');
 
         } catch (error) {

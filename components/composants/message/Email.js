@@ -11,6 +11,7 @@ import MessageBubble from './MessageBubble';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import ChatBackground from './ChatBackground';
+import { addNotification, NOTIFICATION_TYPES } from '../../utils/addNotification';
 
 const db = getFirestore();
 
@@ -58,12 +59,47 @@ const Email = () => {
     if (!datUser?.email) return;
 
     const docRef = doc(db, 'BiblioUser', datUser.email);
-    onSnapshot(docRef, (documentSnapshot) => {
+    onSnapshot(docRef, async (documentSnapshot) => {
       if (documentSnapshot.exists()) {
         const userData = documentSnapshot.data();
         if (!userData.messages) {
           userData.messages = [];
         }
+
+        // Sauvegarder l'état précédent pour comparaison
+        const previousMessages = dat.messages || [];
+        const currentMessages = userData.messages || [];
+
+        // Détecter les nouveaux messages reçus (recue === "R")
+        const newReceivedMessages = currentMessages.filter(msg => {
+          // C'est un message reçu
+          if (msg.recue !== "R") return false;
+
+          // Vérifier qu'il n'était pas dans l'état précédent
+          const wasAlreadyThere = previousMessages.some(prevMsg =>
+              prevMsg.heure?.seconds === msg.heure?.seconds &&
+              prevMsg.texte === msg.texte &&
+              prevMsg.recue === "R"
+          );
+
+          return !wasAlreadyThere;
+        });
+
+        // Ajouter une notification pour chaque nouveau message reçu (maximum 1 par mise à jour)
+        if (newReceivedMessages.length > 0 && dat.messages) { // Seulement si ce n'est pas le premier chargement
+          const latestMessage = newReceivedMessages[newReceivedMessages.length - 1];
+          const messagePreview = latestMessage.texte.length > 50
+              ? latestMessage.texte.substring(0, 50) + '...'
+              : latestMessage.texte;
+
+          await addNotification(
+              datUser.email,
+              NOTIFICATION_TYPES.MESSAGE,
+              'Nouveau message reçu',
+              `"${messagePreview}"`
+          );
+        }
+
         setDat(userData);
         setDatUser(userData);
         setTimeout(() => scrollToBottom(), 100);
@@ -150,24 +186,44 @@ const Email = () => {
   };
 
   async function markMessageAsRead(messageId) {
-    const messageRef = doc(db, "BiblioUser", datUser.email, "messages", messageId);
+    if (!datUser?.email) return;
+
     try {
-      await updateDoc(messageRef, {
-        lu: true
+      const userRef = doc(db, "BiblioUser", datUser.email);
+
+      // Récupérer les messages actuels
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) return;
+
+      const userData = userDoc.data();
+      const messages = userData.messages || [];
+
+      // Trouver et marquer le message comme lu
+      const updatedMessages = messages.map(msg => {
+        if (msg.id === messageId) {
+          return { ...msg, lu: true };
+        }
+        return msg;
       });
+
+      // Mettre à jour le document avec les messages modifiés
+      await updateDoc(userRef, {
+        messages: updatedMessages
+      });
+
     } catch (error) {
       console.error("Error marking message as read:", error);
     }
   }
 
+
   useEffect(() => {
-    // Appeler markMessageAsRead lorsque le composant est monté ou lorsque les messages changent
-    if (datUser?.messages) {
-      datUser.messages.forEach((message, index) => {
-        if (!message.lu && index === datUser.messages.length - 1) {
-          markMessageAsRead(message.id); // Assurez-vous que chaque message a un identifiant unique
-        }
-      });
+    // Marquer le dernier message reçu comme lu automatiquement
+    if (datUser?.messages && datUser.messages.length > 0) {
+      const lastMessage = datUser.messages[datUser.messages.length - 1];
+      if (!lastMessage.lu && lastMessage.recue === "R" && lastMessage.id) {
+        markMessageAsRead(lastMessage.id);
+      }
     }
   }, [datUser?.messages]);
 

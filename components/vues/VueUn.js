@@ -74,6 +74,8 @@ const VueUn = (props) => {
   const [userRecommendations, setUserRecommendations] = useState([]);
   const [similarUsers, setSimilarUsers] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [memoireData, setMemoireData] = useState([]);
+  const [memoireLoader, setMemoireLoader] = useState(true);
 
   // Network helper function
   const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
@@ -270,6 +272,37 @@ const VueUn = (props) => {
     }
   };
 
+  const fetchMemoires = () => {
+    try {
+      const memoireRef = collection(db, 'Memoire');
+      const q = query(memoireRef, orderBy('name', 'asc'));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const items = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          items.push({
+            id: doc.id,
+            ...data,
+            isMémoire: true
+          });
+        });
+        console.log(`${items.length} mémoires chargés`);
+        setMemoireData(items);
+        setMemoireLoader(false);
+      }, (error) => {
+        console.error("Erreur lors de la récupération des mémoires:", error);
+        setMemoireLoader(false);
+      });
+
+      return unsubscribe; // Retourner directement la fonction
+    } catch (error) {
+      console.error("Erreur lors de l'initialisation du listener mémoires:", error);
+      setMemoireLoader(false);
+      return () => {}; // Fonction vide en cas d'erreur
+    }
+  };
+
   // Initial data loading
   useEffect(() => {
     const loadData = async () => {
@@ -291,15 +324,16 @@ const VueUn = (props) => {
 
   // Load web data
   useEffect(() => {
-    // Check if context is initialized
-    if (!currentUserNewNav?.email) {
-      setLoaderWeb(false);
+    if (!currentUserNewNav?.email) {false
+      setLoaderWeb();
+      setMemoireLoader(false);
       return;
     }
 
     try {
-      const q = query(collection(db, 'BiblioWeb'), orderBy('name', 'asc'));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      // Charger les livres
+      const qLivres = query(collection(db, 'BiblioWeb'), orderBy('name', 'asc'));
+      const unsubscribeLivres = onSnapshot(qLivres, (querySnapshot) => {
         const items = [];
         querySnapshot.forEach((doc) => {
           items.push(doc.data());
@@ -307,16 +341,39 @@ const VueUn = (props) => {
         setDataWeb(items);
         setLoaderWeb(false);
       }, (error) => {
-        console.error("Erreur lors de la récupération des données:", error);
+        console.error("Erreur lors de la récupération des données web:", error);
         setLoaderWeb(false);
       });
 
-      return () => unsubscribe();
+      // Charger les mémoires
+      const unsubscribeMemoires = fetchMemoires();
+
+      return () => {
+        unsubscribeLivres();
+        if (unsubscribeMemoires) unsubscribeMemoires();
+      };
     } catch (error) {
-      console.error("Erreur lors de l'initialisation du listener:", error);
+      console.error("Erreur lors de l'initialisation des listeners:", error);
       setLoaderWeb(false);
+      setMemoireLoader(false);
     }
   }, [currentUserNewNav?.email]);
+
+  const handleMemoireClick = (categorieMemoire) => {
+    // Filtrer les mémoires par catégorie
+    const memoiresFiltres = memoireData.filter(memoire =>
+        memoire.departement === categorieMemoire ||
+        memoire.cathegorie === categorieMemoire
+    );
+
+    props.navigation.navigate('Cathegorie', {
+      cathegorie: categorieMemoire,
+      datUser: datUser,
+      isMemoire: true,
+      memoireData: memoiresFiltres
+    });
+  };
+
 
   // Render recommendation section
   const renderRecommendationSection = () => {
@@ -561,21 +618,33 @@ const VueUn = (props) => {
             </View>
           </View>
         ) : (
-          <View style={styles.categorySection}>
-            <Text style={styles.categorySectionTitle}>
-              LES MEMOIRES-DEPARTEMENTS
-            </Text>
-            <View style={styles.circleContainer}>
-              <Cercle id="" datUser={datUser} image={imgMemGI} cathegorie="Memoire GI" props={props} />
-              <Cercle id="" datUser={datUser} image={imgMemGC} cathegorie="Memoire GC" props={props} />
-              <Cercle id="" datUser={datUser} image={imgMemGM} cathegorie="Memoire GM" props={props} />
+            <View style={styles.categorySection}>
+              <Text style={styles.categorySectionTitle}>
+                LES MEMOIRES-DEPARTEMENTS
+              </Text>
+              <View style={styles.circleContainer}>
+                <TouchableOpacity onPress={() => handleMemoireClick('Memoire GI')}>
+                  <Cercle id="" datUser={datUser} image={imgMemGI} cathegorie="Memoire GI" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleMemoireClick('Memoire GC')}>
+                  <Cercle id="" datUser={datUser} image={imgMemGC} cathegorie="Memoire GC" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleMemoireClick('Memoire GM')}>
+                  <Cercle id="" datUser={datUser} image={imgMemGM} cathegorie="Memoire GM" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.circleContainer}>
+                <TouchableOpacity onPress={() => handleMemoireClick('Memoire GInd')}>
+                  <Cercle id="" datUser={datUser} image={imgMemGInd} cathegorie="Memoire GInd" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleMemoireClick('Memoire GEle')}>
+                  <Cercle id="" datUser={datUser} image={imgMemGEle} cathegorie="Memoire GEle" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleMemoireClick('Memoire GTel')}>
+                  <Cercle id="" datUser={datUser} image={imgMemGTel} cathegorie="Memoire GTel" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.circleContainer}>
-              <Cercle id="" datUser={datUser} image={imgMemGInd} cathegorie="Memoire GInd" props={props} />
-              <Cercle id="" datUser={datUser} image={imgMemGEle} cathegorie="Memoire GEle" props={props} />
-              <Cercle id="" datUser={datUser} image={imgMemGTel} cathegorie="Memoire GTel" props={props} />
-            </View>
-          </View>
         )}
       </ScrollView>
     </SafeAreaView>

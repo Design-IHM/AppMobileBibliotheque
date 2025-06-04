@@ -3,9 +3,12 @@ import React, { useEffect, useState, useContext } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome5, Feather } from '@expo/vector-icons'
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
-import { db } from '../../config'
+import { signOut } from 'firebase/auth' // Ajouter cet import
+import { db, auth } from '../../config'
 import { UserContext } from '../context/UserContext'
 import { useNavigation } from "@react-navigation/native"
+import { useNotificationCount } from '../hooks/useNotificationCount';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const WIDTH = Dimensions.get('screen').width
@@ -16,11 +19,19 @@ export default function Parametre() {
   const { currentUserNewNav } = useContext(UserContext)
   const [datUserParams, setDatUserParams] = useState('')
   const [loading, setLoading] = useState(true)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true)
-  const [unreadNotifications, setUnreadNotifications] = useState(3) // Exemple de compteur de notifications
   const [language, setLanguage] = useState('Français') // Pour l'internationalisation
+  const [empruntsCount, setEmpruntsCount] = useState(0);
+  const unreadNotifications = useNotificationCount(currentUserNewNav?.email);
 
+  const [storageInfo, setStorageInfo] = useState({
+    total: 0,
+    used: 0,
+    books: 0,
+    pdfs: 0,
+    images: 0
+  });
 
   const t = (key) => {
     const translations = {
@@ -89,9 +100,23 @@ export default function Parametre() {
           doc(db, 'BiblioUser', currentUserNewNav.email),
           (docSnapshot) => {
             if (docSnapshot.exists()) {
-              setDatUserParams(docSnapshot.data());
+              const userData = docSnapshot.data();
+              setDatUserParams(userData);
+
+              // Calculer le nombre d'emprunts actifs
+              let empruntsCount = 0;
+              for (let i = 1; i <= 3; i++) {
+                if (userData[`etat${i}`] === 'emprunt') {
+                  empruntsCount++;
+                }
+              }
+
+              console.log('Nombre d\'emprunts calculé:', empruntsCount);
+              setEmpruntsCount(empruntsCount); // Mettre à jour le state
+
             } else {
               console.log("Aucune donnée utilisateur trouvée");
+              setEmpruntsCount(0);
             }
             setLoading(false);
           },
@@ -108,6 +133,89 @@ export default function Parametre() {
     }
   }, [currentUserNewNav?.email]);
 
+  useEffect(() => {
+    loadDarkModePreference();
+  }, []);
+
+  useEffect(() => {
+    loadLanguagePreference();
+  }, []);
+
+  useEffect(() => {
+    calculateRealStorageData();
+  }, [datUserParams]);
+
+  const calculateRealStorageData = async () => {
+    try {
+      if (!datUserParams) return;
+
+      // Calculer les données réelles basées sur l'utilisateur
+      const reservations = [
+        datUserParams.etat1,
+        datUserParams.etat2,
+        datUserParams.etat3
+      ].filter(etat => etat === 'reserv').length;
+
+      const historySize = (datUserParams.historique || []).length;
+      const notificationsSize = (datUserParams.notifications || []).length;
+
+      // Estimation approximative (en Ko)
+      const estimatedUsage = {
+        books: reservations * 50, // 50Ko par réservation
+        notifications: notificationsSize * 5, // 5Ko par notification
+        history: historySize * 10, // 10Ko par élément d'historique
+        userData: 20 // 20Ko pour les données utilisateur
+      };
+
+      const totalUsed = Object.values(estimatedUsage).reduce((a, b) => a + b, 0);
+
+      setStorageInfo({
+        total: 1024, // 1MB total
+        used: totalUsed,
+        books: estimatedUsage.books,
+        notifications: estimatedUsage.notifications,
+        history: estimatedUsage.history,
+        userData: estimatedUsage.userData
+      });
+    } catch (error) {
+      console.error('Erreur lors du calcul du stockage:', error);
+    }
+  };
+
+  const loadLanguagePreference = async () => {
+    try {
+      const languageValue = await AsyncStorage.getItem('language');
+      if (languageValue !== null) {
+        setLanguage(languageValue);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la langue:', error);
+    }
+  };
+
+
+  const loadDarkModePreference = async () => {
+    try {
+      const darkModeValue = await AsyncStorage.getItem('darkMode');
+      if (darkModeValue !== null) {
+        setIsDarkMode(JSON.parse(darkModeValue));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du mode sombre:', error);
+    }
+  };
+
+  const toggleDarkMode = async (value) => {
+    try {
+      setIsDarkMode(value);
+      await AsyncStorage.setItem('darkMode', JSON.stringify(value));
+      // Pour une implémentation complète, il faudrait un Context global
+      Alert.alert('Information', 'Le mode sombre sera appliqué au prochain redémarrage de l\'application.');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du mode sombre:', error);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
         t('logout'),
@@ -117,11 +225,18 @@ export default function Parametre() {
           {
             text: t('confirm'),
             style: 'destructive',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'NavLogin' }],
-              });
+            onPress: async () => {
+              try {
+                // Déconnexion Firebase
+                await signOut(auth);
+                console.log('Utilisateur déconnecté avec succès');
+
+                // La navigation sera gérée automatiquement par le contexte NavApp
+                // qui écoute les changements d'état d'authentification
+              } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+                Alert.alert('Erreur', 'Impossible de se déconnecter. Veuillez réessayer.');
+              }
             }
           }
         ]
@@ -157,13 +272,18 @@ export default function Parametre() {
 
   // Redirection vers les notifications
   const goToNotifications = () => {
-    setUnreadNotifications(0);
     navigation.navigate('Notifications');
   };
 
   // Redirection vers les paramètres de langue
   const goToLanguageSettings = () => {
-    navigation.navigate('LanguageSettings');
+    navigation.navigate('LanguageSettings', {
+      currentLanguage: language,
+      onLanguageChange: (newLanguage) => {
+        setLanguage(newLanguage);
+        AsyncStorage.setItem('language', newLanguage);
+      }
+    });
   };
 
   // Redirection vers l'invitation d'étudiants
@@ -173,7 +293,10 @@ export default function Parametre() {
 
   // Redirection vers les paramètres de stockage
   const goToStorage = () => {
-    navigation.navigate('StorageSettings');
+    navigation.navigate('StorageSettings', {
+      storageData: storageInfo,
+      userEmail: currentUserNewNav?.email
+    });
   };
 
   // Redirection vers les paramètres de sécurité
@@ -286,7 +409,7 @@ export default function Parametre() {
               icon: <MaterialCommunityIcons name="bookshelf" size={20} color="#4361EE" />,
               iconColor: "#4361EE",
               title: "Mes emprunts",
-              badge: datUserParams?.emprunts?.length || "0",
+              badge: empruntsCount > 0 ? empruntsCount.toString() : null, // Utiliser le state calculé
               action: goToBorrowings
             })}
 

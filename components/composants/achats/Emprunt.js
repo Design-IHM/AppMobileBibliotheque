@@ -1,52 +1,65 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config';
 import { UserContext } from '../../context/UserContext';
 
 export default function Emprunt({ navigation }) {
-    const { emailHigh } = useContext(UserContext);
+    const { currentUserNewNav } = useContext(UserContext);
     const [emprunts, setEmprunts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchEmprunts = async () => {
-            if (!emailHigh) {
+            if (!currentUserNewNav?.email) {
                 setLoading(false);
                 return;
             }
 
             try {
-                // Récupération depuis la collection 'emprunts'
-                const q = query(collection(db, 'emprunts'), where('userEmail', '==', emailHigh));
-                const unsubscribe = onSnapshot(q, async (snapshot) => {
-                    // Récupérer les données complètes des livres pour chaque emprunt
-                    const empruntPromises = snapshot.docs.map(async (doc) => {
-                        const empruntData = { id: doc.id, ...doc.data() };
+                // Écouter les changements du document utilisateur
+                const userRef = doc(db, 'BiblioUser', currentUserNewNav.email);
+                const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const userData = docSnapshot.data();
+                        const empruntsData = [];
 
-                        // Vérifier si nous avons besoin de récupérer des détails supplémentaires du livre
-                        if (empruntData.livreId && (!empruntData.titre || !empruntData.imageUrl)) {
-                            try {
-                                const livreDoc = await getDoc(doc(db, 'livres', empruntData.livreId));
-                                if (livreDoc.exists()) {
-                                    const livreData = livreDoc.data();
-                                    // Fusionner les données du livre avec l'emprunt
-                                    return {
-                                        ...empruntData,
-                                        titre: empruntData.titre || livreData.titre,
-                                        imageUrl: empruntData.imageUrl || livreData.imageUrl,
-                                    };
-                                }
-                            } catch (error) {
-                                console.error("Erreur lors de la récupération des détails du livre:", error);
+                        // Vérifier les 3 emplacements pour les emprunts
+                        for (let i = 1; i <= 3; i++) {
+                            const etat = userData[`etat${i}`];
+                            const tabEtat = userData[`tabEtat${i}`];
+
+                            console.log(`Vérification emplacement ${i}:`, { etat, tabEtat });
+
+                            // Si l'état est "emprunt" et qu'il y a des données
+                            if (etat === 'emprunt' && Array.isArray(tabEtat) && tabEtat.length >= 6) {
+                                const emprunt = {
+                                    id: `emprunt_${i}`,
+                                    emplacement: i,
+                                    titre: tabEtat[0],
+                                    cathegorie: tabEtat[1],
+                                    imageUrl: tabEtat[2],
+                                    exemplairesRestants: tabEtat[3],
+                                    collection: tabEtat[4],
+                                    dateEmprunt: tabEtat[5], // Timestamp de la réservation/emprunt
+                                    bookId: tabEtat[6] || null,
+                                    statut: 'Emprunté',
+                                    // Calculer la date de retour (par exemple, 2 semaines après l'emprunt)
+                                    dateRetour: tabEtat[5] ? new Date(tabEtat[5].seconds * 1000 + 14 * 24 * 60 * 60 * 1000) : new Date()
+                                };
+
+                                console.log('Emprunt trouvé:', emprunt);
+                                empruntsData.push(emprunt);
                             }
                         }
-                        return empruntData;
-                    });
 
-                    const empruntData = await Promise.all(empruntPromises);
-                    setEmprunts(empruntData);
+                        console.log(`${empruntsData.length} emprunts trouvés`);
+                        setEmprunts(empruntsData);
+                    } else {
+                        console.log('Document utilisateur non trouvé');
+                        setEmprunts([]);
+                    }
                     setLoading(false);
                 }, (error) => {
                     console.error("Erreur lors de l'écoute des emprunts:", error);
@@ -61,7 +74,7 @@ export default function Emprunt({ navigation }) {
         };
 
         fetchEmprunts();
-    }, [emailHigh]);
+    }, [currentUserNewNav?.email]);
 
     const navigateToBibliotheque = () => {
         navigation.navigate('VueUn');
@@ -82,29 +95,25 @@ export default function Emprunt({ navigation }) {
     );
 
     // Fonction cohérente pour formater les dates Firestore
-    const formatFirestoreDate = (firestoreDate) => {
-        if (!firestoreDate) return 'N/A';
+    const formatFirestoreDate = (date) => {
+        if (!date) return 'N/A';
 
-        // Si la date est un timestamp Firestore (contient seconds)
-        if (firestoreDate.seconds) {
-            return new Date(firestoreDate.seconds * 1000).toLocaleDateString();
+        // Si c'est un timestamp Firestore
+        if (date.seconds) {
+            return new Date(date.seconds * 1000).toLocaleDateString('fr-FR');
         }
-        // Si la date est déjà un objet Date ou une chaîne ISO
-        return new Date(firestoreDate).toLocaleDateString();
+        // Si c'est déjà un objet Date
+        if (date instanceof Date) {
+            return date.toLocaleDateString('fr-FR');
+        }
+        // Si c'est une chaîne ISO
+        return new Date(date).toLocaleDateString('fr-FR');
     };
 
     // Fonction pour vérifier si un emprunt est en retard
     const isEmpruntOverdue = (dateRetour) => {
         if (!dateRetour) return false;
-
-        let dateRetourObj;
-        if (dateRetour.seconds) {
-            dateRetourObj = new Date(dateRetour.seconds * 1000);
-        } else {
-            dateRetourObj = new Date(dateRetour);
-        }
-
-        return dateRetourObj < new Date();
+        return new Date(dateRetour) < new Date();
     };
 
     const renderItem = ({ item }) => {
@@ -115,12 +124,18 @@ export default function Emprunt({ navigation }) {
             <TouchableOpacity
                 style={styles.bookItem}
                 onPress={() => {
-                    // Navigation avec l'ID du livre si disponible, sinon l'ID de l'emprunt
-                    const targetId = item.livreId || item.id;
-                    navigation.navigate('BookDetails', {
-                        bookId: targetId,
-                        isEmprunt: true, // Flag pour indiquer qu'on vient de la vue emprunt
-                        empruntId: item.id // Toujours envoyer l'ID de l'emprunt
+                    // Navigation vers les détails du livre
+                    navigation.navigate('Produit', {
+                        name: item.titre,
+                        desc: '',
+                        image: item.imageUrl,
+                        cathegorie: item.cathegorie,
+                        type: '',
+                        salle: '',
+                        etagere: '',
+                        exemplaire: item.exemplairesRestants,
+                        commentaire: [],
+                        nomBD: item.collection,
                     });
                 }}
             >
@@ -131,13 +146,13 @@ export default function Emprunt({ navigation }) {
                             : require('../../../assets/thesis.png')
                     }
                     style={styles.bookCover}
-                    // Ajouter un gestionnaire d'erreur au cas où l'URL de l'image est invalide
                     onError={({ nativeEvent: { error } }) => {
                         console.log("Erreur de chargement d'image:", error);
                     }}
                 />
                 <View style={styles.bookInfo}>
                     <Text style={styles.bookTitle} numberOfLines={2}>{item.titre || 'Titre inconnu'}</Text>
+
                     <View style={styles.bookMetaContainer}>
                         <View style={styles.bookMeta}>
                             <Ionicons name="calendar-outline" size={14} color="#8E8E93" />
@@ -145,6 +160,7 @@ export default function Emprunt({ navigation }) {
                                 Emprunté le: {formatFirestoreDate(item.dateEmprunt)}
                             </Text>
                         </View>
+
                         <View style={styles.bookMeta}>
                             <Ionicons
                                 name="time-outline"
@@ -160,14 +176,23 @@ export default function Emprunt({ navigation }) {
                                 À rendre le: {formatFirestoreDate(item.dateRetour)}
                             </Text>
                         </View>
+
+                        <View style={styles.bookMeta}>
+                            <Ionicons name="location-outline" size={14} color="#8E8E93" />
+                            <Text style={styles.bookMetaText}>
+                                Emplacement: {item.emplacement}/3
+                            </Text>
+                        </View>
                     </View>
+
                     {isOverdue && (
                         <View style={styles.overdueTag}>
                             <Text style={styles.overdueTagText}>En retard</Text>
                         </View>
                     )}
+
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.statut) }]}>
-                        <Text style={styles.statusText}>{item.statut || 'Emprunté'}</Text>
+                        <Text style={styles.statusText}>{item.statut}</Text>
                     </View>
                 </View>
             </TouchableOpacity>
@@ -176,14 +201,10 @@ export default function Emprunt({ navigation }) {
 
     // Fonction pour déterminer la couleur du statut
     const getStatusColor = (status) => {
-        if (!status) return '#FF8A50'; // Couleur par défaut (orange)
-
-        switch (status.toLowerCase()) {
-            case 'emprunté':
-                return '#FF8A50'; // Orange principal
-            case 'rendu':
-                return '#4CAF50'; // Vert
-            case 'en retard':
+        switch (status) {
+            case 'Emprunté':
+                return '#FF8A50'; // Orange
+            case 'En retard':
                 return '#FF3B30'; // Rouge
             default:
                 return '#757575'; // Gris par défaut
@@ -207,7 +228,7 @@ export default function Emprunt({ navigation }) {
             ) : (
                 <FlatList
                     data={emprunts}
-                    keyExtractor={(item, index) => item.id || index.toString()}
+                    keyExtractor={(item) => item.id}
                     renderItem={renderItem}
                     ListEmptyComponent={renderEmptyList}
                     contentContainerStyle={emprunts.length === 0 ? { flex: 1 } : { paddingBottom: 20 }}

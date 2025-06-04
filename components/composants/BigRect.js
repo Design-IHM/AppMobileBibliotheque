@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
-import React, { useContext, useState } from 'react';
+import { arrayUnion, doc, updateDoc,onSnapshot} from 'firebase/firestore';
+import React, { useContext, useState,useEffect } from 'react';
 import { ImageBackground, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../config'; 
 import { UserContextNavApp } from '../navigation/NavApp';
@@ -19,6 +19,7 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
   const { currentUserdata } = useContext(UserContextNavApp);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [currentExemplaire, setCurrentExemplaire] = useState(exemplaire);
 
   const voirProduit = () => {
     // S'assurer que name est défini avant de le normaliser
@@ -59,20 +60,56 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
     }
   };
 
+  useEffect(() => {
+    if (!name || !cathegorie) return;
+
+    // Déterminer la collection basée sur la catégorie
+    let collectionName = 'BiblioInformatique';
+    switch (cathegorie) {
+      case 'Genie Electrique':
+        collectionName = 'BiblioGE';
+        break;
+      case 'Genie Informatique':
+        collectionName = 'BiblioGI';
+        break;
+      case 'Genie Mecanique':
+        collectionName = 'BiblioGM';
+        break;
+      case 'Genie Telecom':
+        collectionName = 'BiblioGT';
+        break;
+    }
+
+    // Écouter les changements sur ce livre spécifique
+    const bookRef = doc(db, collectionName, name);
+    const unsubscribe = onSnapshot(bookRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const bookData = docSnapshot.data();
+        setCurrentExemplaire(bookData.exemplaire || 0);
+      }
+    }, (error) => {
+      console.error('Erreur lors de l\'écoute du livre:', error);
+    });
+
+    return () => unsubscribe();
+  }, [name, cathegorie]);
+
   return (
     <View style={styles.contain}>
       <TouchableOpacity onPress={ajouter} style={styles.bookCard}>
         <View style={styles.imageWrapper}>
-          <ImageBackground 
-            style={styles.container} 
-            source={{ uri: image }}
-            resizeMode="cover"
-            imageStyle={styles.image}
+          <ImageBackground
+              style={styles.container}
+              source={{ uri: image }}
+              resizeMode="cover"
+              imageStyle={styles.image}
           />
-          {exemplaire < 3 && (
-            <View style={styles.badgeContainer}>
-              <Text style={styles.badgeText}>{exemplaire === 0 ? 'Indisponible' : 'Stock limité'}</Text>
-            </View>
+          {currentExemplaire < 3 && (
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>
+                  {currentExemplaire === 0 ? 'Indisponible' : 'Stock limité'}
+                </Text>
+              </View>
           )}
         </View>
         <View style={styles.infoContainer}>
@@ -81,7 +118,9 @@ const BigRect = ({ salle, desc, etagere, exemplaire, image, name, cathegorie, da
           </Text>
           <View style={styles.detailsRow}>
             <Text style={styles.category}>{cathegorie}</Text>
-            <Text style={styles.exemplaire}>{exemplaire} ex{exemplaire > 1 ? 's' : ''}</Text>
+            <Text style={styles.exemplaire}>
+              {currentExemplaire} ex{currentExemplaire > 1 ? 's' : ''}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>

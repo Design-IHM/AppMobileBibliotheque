@@ -8,6 +8,7 @@ import { useFirebase } from '../../context/FirebaseContext';
 import BigRect from '../BigRect';
 import PubCar from '../PubCar';
 import PubRect from '../PubRect';
+import { addNotification, NOTIFICATION_TYPES } from '../../utils/addNotification';
 
 const WIDTH = Dimensions.get('window').width;
 const HEIGHT = Dimensions.get('window').height;
@@ -55,11 +56,21 @@ const Produit = ({ route, navigation }) => {
   const [similarBooks, setSimilarBooks] = useState([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
+  const [currentExemplaire, setCurrentExemplaire] = useState(exemplaire);
+  const [isReserving, setIsReserving] = useState(false);
+
+
   const ajouterRecent = async () => {
     if (!currentUserdata?.email) {
       Alert.alert('Erreur', 'Vous devez être connecté pour réserver un livre');
       return;
     }
+    if (currentExemplaire <= 0) {
+      Alert.alert('Erreur', 'Aucun exemplaire disponible');
+      return;
+    }
+
+    setIsReserving(true);
 
     try {
       // Vérifier que toutes les données nécessaires sont présentes
@@ -86,18 +97,24 @@ const Produit = ({ route, navigation }) => {
           signalMessage: 'ras',
           docRecent: [],
           searchHistory: [],
-          etat1:'ras',
-          etat2:'ras',
-          etat3:'ras',
-          tabEtat1:[],
-          tabEtat2:[],
-          tabEtat3:[]
+          etat1: 'ras',
+          etat2: 'ras',
+          etat3: 'ras',
+          tabEtat1: [],
+          tabEtat2: [],
+          tabEtat3: []
         });
       }
 
       const userData = userDoc.data() || {};
 
-      // Vérifier le nombre de réservations actives
+      // DEBUG: Afficher l'état actuel de tous les emplacements
+      console.log('État actuel des emplacements:');
+      console.log('etat1:', userData.etat1, 'tabEtat1:', userData.tabEtat1);
+      console.log('etat2:', userData.etat2, 'tabEtat2:', userData.tabEtat2);
+      console.log('etat3:', userData.etat3, 'tabEtat3:', userData.tabEtat3);
+
+      // Vérifier le nombre de réservations actives (maximum 3)
       const activeReservations = [
         userData.etat1,
         userData.etat2,
@@ -107,32 +124,59 @@ const Produit = ({ route, navigation }) => {
       console.log('Nombre de réservations actives:', activeReservations);
 
       if (activeReservations >= 3) {
-        Alert.alert('Information', 'Vous avez déjà 3 réservations actives. Veuillez attendre que certaines soient traitées avant d\'en faire de nouvelles.');
-        return;
-      }
-
-      //trouver un emplacement libre(etati et tabEtati)
-      let etatIndex = -1;
-      for (let i=1;i<=3;i++){
-        if(userData[`etat${i}`] === 'ras'){
-          etatIndex=i;
-          break;
-        }
-      }
-
-      if (etatIndex === -1) {
-        Alert.alert('Erreur', 'Aucun emplacement disponible pour une nouvelle réservation');
+        Alert.alert('Limite atteinte', 'Vous avez déjà 3 réservations actives. Veuillez attendre que certaines soient traitées avant d\'en faire de nouvelles.');
         return;
       }
 
       // Vérifier si le livre est déjà réservé par l'utilisateur
-      const isAlreadyReserved = (userData.reservations || [])
-        .some(res => res.etat === 'reserv' && normalizeString(res.name) === normalizedName);
+      const isAlreadyReserved = [
+        userData.tabEtat1,
+        userData.tabEtat2,
+        userData.tabEtat3
+      ].some(tabEtat => {
+        if (Array.isArray(tabEtat) && tabEtat.length > 0) {
+          const bookName = tabEtat[0];
+          const isReserved = normalizeString(bookName) === normalizedName;
+          if (isReserved) {
+            console.log('Livre déjà réservé:', bookName);
+          }
+          return isReserved;
+        }
+        return false;
+      });
 
       if (isAlreadyReserved) {
         Alert.alert('Information', 'Vous avez déjà réservé ce livre');
         return;
       }
+
+      // Trouver un emplacement libre (etat1, etat2, ou etat3)
+      let etatIndex = -1;
+      for (let i = 1; i <= 3; i++) {
+        const etatValue = userData[`etat${i}`];
+        console.log(`Vérification etat${i}:`, etatValue);
+
+        // Considérer comme libre si la valeur est 'ras', undefined, null, ou une chaîne vide
+        if (!etatValue || etatValue === 'ras' || etatValue === '') {
+          etatIndex = i;
+          console.log(`Emplacement libre trouvé: etat${i}`);
+          break;
+        }
+      }
+
+      console.log('Index d\'emplacement trouvé:', etatIndex);
+
+      if (etatIndex === -1) {
+        console.error('Aucun emplacement libre trouvé. États actuels:', {
+          etat1: userData.etat1,
+          etat2: userData.etat2,
+          etat3: userData.etat3
+        });
+        Alert.alert('Erreur', 'Aucun emplacement disponible pour une nouvelle réservation');
+        return;
+      }
+
+      console.log(`Utilisation de l'emplacement etat${etatIndex}`);
 
       // Trouver le livre dans toutes les collections
       const collections = ['BiblioGM', 'BiblioGE', 'BiblioGI', 'BiblioGT', 'BiblioInformatique'];
@@ -142,43 +186,86 @@ const Produit = ({ route, navigation }) => {
         const q = query(collection(db, collectionName));
         const querySnapshot = await getDocs(q);
 
-        for (const doc of querySnapshot.docs) {
-          const bookData = doc.data();
+        for (const bookDoc of querySnapshot.docs) {
+          const bookData = bookDoc.data();
+
+          // Comparer les noms de livres
           if (normalizeString(bookData.name) === normalizedName) {
-            // Livre trouvé, vérifier les exemplaires
+            console.log(`Livre trouvé dans ${collectionName}:`, bookData.name, 'Exemplaires:', bookData.exemplaire);
+
+            // Vérifier les exemplaires disponibles
             if (bookData.exemplaire > 0) {
               const batch = writeBatch(db);
 
-              // Mettre à jour le nombre d'exemplaires
-              const bookRef = doc.ref;
-              batch.update(bookRef, {
+              // Mettre à jour le nombre d'exemplaires du livre
+              batch.update(bookDoc.ref, {
                 exemplaire: increment(-1)
               });
 
               // Mettre à jour l'état de réservation de l'utilisateur
               const updateData = {
-                [`etat${etatIndex}`]:'reserv',
-                [`tabEtat${etatIndex}`]:[name, cathegorie, image, bookData.exemplaire, collectionName, Timestamp.now()],
+                [`etat${etatIndex}`]: 'reserv',
+                [`tabEtat${etatIndex}`]: [
+                  name,
+                  cathegorie,
+                  image,
+                  bookData.exemplaire - 1,
+                  collectionName,
+                  Timestamp.now(),
+                  bookDoc.id // Ajouter l'ID du document pour faciliter les mises à jour futures
+                ],
                 docRecent: arrayUnion({
                   cathegorieDoc: cathegorie,
                   type: type
                 })
               };
 
+              console.log('Données de mise à jour:', updateData);
+
               batch.update(userRef, updateData);
 
               await batch.commit();
-              console.log('Réservation effectuée:', {
+
+              // Ajouter une notification de réservation
+              try {
+                const notificationData = {
+                  id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  type: 'reservation',
+                  title: 'Réservation confirmée',
+                  message: `Votre réservation pour le livre "${name}" (${cathegorie}) a été confirmée avec succès. Vous pouvez venir le retirer à la bibliothèque pendant les heures d'ouverture.`,
+                  date: Timestamp.now(),
+                  read: false
+                };
+
+                await updateDoc(userRef, {
+                  notifications: arrayUnion(notificationData)
+                });
+
+                console.log('Notification de réservation ajoutée');
+              } catch (notifError) {
+                console.error('Erreur lors de l\'ajout de la notification:', notifError);
+              }
+
+              console.log('Réservation effectuée avec succès:', {
                 name: name,
                 cathegorie: cathegorie,
-                exemplaires: bookData.exemplaire,
-                collection: collectionName
+                exemplaires_restants: bookData.exemplaire - 1,
+                collection: collectionName,
+                emplacement: `etat${etatIndex}`
               });
-              Alert.alert('Succès', 'Livre réservé avec succès');
+
+              await addNotification(
+                  currentUserdata.email,
+                  NOTIFICATION_TYPES.RESERVATION,
+                  'Réservation confirmée',
+                  `Votre réservation pour "${name}" a été confirmée. Vous pouvez venir récupérer le livre à la bibliothèque.`
+              );
+
+              Alert.alert('Succès', `Livre réservé avec succès!\nEmplacement: ${etatIndex}/3`);
               bookFound = true;
               break;
             } else {
-              Alert.alert('Erreur', 'Aucun exemplaire disponible');
+              Alert.alert('Erreur', 'Aucun exemplaire disponible pour ce livre');
               return;
             }
           }
@@ -198,6 +285,8 @@ const Produit = ({ route, navigation }) => {
     } catch (error) {
       console.error('Erreur lors de la réservation:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors de la réservation');
+    }finally {
+      setIsReserving(false);
     }
   };
 
@@ -307,6 +396,10 @@ const Produit = ({ route, navigation }) => {
       setLoader(false);
     }
   };
+
+  useEffect(() => {
+    setCurrentExemplaire(exemplaire);
+  }, [exemplaire]);
 
   useEffect(() => {
     // Charger les commentaires au montage du composant
@@ -466,18 +559,65 @@ const Produit = ({ route, navigation }) => {
         // Si non trouvé, chercher dans toutes les collections
         const collections = ['BiblioGM', 'BiblioGE', 'BiblioGI', 'BiblioGT', 'BiblioInformatique'];
 
+        let bookFound = false;
         for (const collectionName of collections) {
-          const collectionRef = collection(db, collectionName);
-          const q = query(collectionRef);
+          const q = query(collection(db, collectionName));
           const querySnapshot = await getDocs(q);
 
-          for (const doc of querySnapshot.docs) {
-            const docData = doc.data();
-            if (normalizeString(docData.name) === normalizedName) {
-              bookRef = doc.ref;
-              bookData = docData;
-              bookFound = true;
-              break;
+          for (const docSnapshot of querySnapshot.docs) {
+            const bookData = docSnapshot.data();
+            if (normalizeString(bookData.name) === normalizedName) {
+              // Livre trouvé, vérifier les exemplaires
+              if (bookData.exemplaire > 0) {
+                const batch = writeBatch(db);
+
+                // Mettre à jour le nombre d'exemplaires
+                const bookRef = docSnapshot.ref;
+                batch.update(bookRef, {
+                  exemplaire: increment(-1)
+                });
+
+                // Mettre à jour l'état de réservation de l'utilisateur
+                const updateData = {
+                  [`etat${etatIndex}`]: 'reserv',
+                  [`tabEtat${etatIndex}`]: [name, cathegorie, image, bookData.exemplaire - 1, collectionName, Timestamp.now()],
+                  docRecent: arrayUnion({
+                    cathegorieDoc: cathegorie,
+                    type: type
+                  })
+                };
+
+                const userRef = doc(db, "BiblioUser", currentUserdata.email);
+                batch.update(userRef, updateData);
+
+                await batch.commit();
+
+                // MISE À JOUR LOCALE IMMÉDIATE
+                setCurrentExemplaire(prev => Math.max(0, prev - 1));
+
+                // Ajouter notification
+                await addNotification(
+                    currentUserdata.email,
+                    NOTIFICATION_TYPES.RESERVATION,
+                    'Réservation confirmée',
+                    `Votre réservation pour "${name}" a été confirmée.`
+                );
+
+                console.log('Réservation effectuée:', {
+                  name: name,
+                  cathegorie: cathegorie,
+                  exemplaires: bookData.exemplaire - 1,
+                  collection: collectionName
+                });
+
+                Alert.alert('Succès', 'Livre réservé avec succès');
+                bookFound = true;
+                break;
+              } else {
+                Alert.alert('Erreur', 'Aucun exemplaire disponible');
+                setCurrentExemplaire(0);
+                return;
+              }
             }
           }
           if (bookFound) break;
@@ -485,8 +625,12 @@ const Produit = ({ route, navigation }) => {
       }
 
       if (!bookFound) {
-        Alert.alert('Erreur', 'Ce livre n\'a pas été trouvé dans la bibliothèque.');
-        return;
+        console.error('Livre non trouvé:', {
+          name: name,
+          normalized: normalizedName,
+          searchedCollections: collections
+        });
+        Alert.alert('Erreur', 'Livre non trouvé dans la base de données');
       }
 
       // Ajouter le commentaire
@@ -696,11 +840,11 @@ const Produit = ({ route, navigation }) => {
             <View style={styles.exemplairesContainer}>
               <Text style={[
                 styles.exemplairesText,
-                exemplaire > 0 ? styles.disponible : styles.nonDisponible
+                currentExemplaire > 0 ? styles.disponible : styles.nonDisponible
               ]}>
-                {exemplaire > 0
-                  ? `${exemplaire} exemplaire${exemplaire > 1 ? 's' : ''} disponible${exemplaire > 1 ? 's' : ''}`
-                  : 'Indisponible'
+                {currentExemplaire > 0
+                    ? `${currentExemplaire} exemplaire${currentExemplaire > 1 ? 's' : ''} disponible${currentExemplaire > 1 ? 's' : ''}`
+                    : 'Indisponible'
                 }
               </Text>
             </View>
@@ -712,15 +856,20 @@ const Produit = ({ route, navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={[
-              styles.empruntButton,
-              exemplaire === 0 && styles.empruntButtonDisabled
-            ]}
-            onPress={ajouterRecent}
-            disabled={exemplaire === 0}
+              style={[
+                styles.empruntButton,
+                (currentExemplaire === 0 || isReserving) && styles.empruntButtonDisabled
+              ]}
+              onPress={ajouterRecent}
+              disabled={currentExemplaire === 0 || isReserving}
           >
             <Text style={styles.empruntButtonText}>
-              {exemplaire === 0 ? 'Indisponible' : 'Réserver'}
+              {isReserving
+                  ? 'Réservation...'
+                  : currentExemplaire === 0
+                      ? 'Indisponible'
+                      : 'Réserver'
+              }
             </Text>
           </TouchableOpacity>
         </View>
