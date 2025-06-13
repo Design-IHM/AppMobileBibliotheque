@@ -12,28 +12,42 @@ import Cercle from '../composants/Cercle'
 import SmallRect from '../composants/SmallRect'
 import PageWeb from '../composants/PageWeb'
 import ModalWeb from '../composants/ModalWeb'
-import Email from '../composants/message/Email'
+import Email from '../composants/message/EnhancedEmail'
+import ChatBot from '../composants/chatBot/ChatBot'
+
 import ScreenVueUn from '../vues/ScreenVueUn'
 
 const screenOptions = {
-    headerShown:false,  
+     headerShown: false,
 }
 
 const NavShop = () => (
     <Stack.Navigator initialRouteName='ScreenVueUn' screenOptions={screenOptions}>
-     <Stack.Screen name='ScreenVueUn' component={ScreenVueUn} />
-     <Stack.Screen name='VueUn' component={VueUn} />
-     <Stack.Screen name='Panier' component={Panier} />
-     <Stack.Screen name='Produit' component={Produit} />
-     <Stack.Screen name='FichePaie' component={FichePaie} />     
-     <Stack.Screen name='BigRect' component={BigRect} />     
-     <Stack.Screen name='Cercle' component={Cercle} />     
-     <Stack.Screen name='Cathegorie' component={Cathegorie} />     
-     <Stack.Screen name='SmallRect' component={SmallRect} />     
-     <Stack.Screen name='PageWeb' component={PageWeb} />     
-     <Stack.Screen name='ModalWeb' component={ModalWeb} />     
-     <Stack.Screen name='Email' component={Email} />     
+         <Stack.Screen name='ScreenVueUn' component={ScreenVueUn} />
+         <Stack.Screen name='VueUn' component={VueUn} />
+         <Stack.Screen name='Panier' component={Panier} />
+         <Stack.Screen name='Produit' component={Produit} />
+         <Stack.Screen name='FichePaie' component={FichePaie} />
+
+         <Stack.Screen name='BigRect' component={BigRect} />
+         <Stack.Screen name='Cercle' component={Cercle} />
+         <Stack.Screen name='Cathegorie' component={Cathegorie} />
+         <Stack.Screen name='SmallRect' component={SmallRect} />
+         <Stack.Screen name='PageWeb' component={PageWeb} />
+         <Stack.Screen name='ModalWeb' component={ModalWeb} />
+
+         {/* COMPOSANT PRINCIPAL : Votre chat existant amélioré */}
+         <Stack.Screen name='Email' component={Email} />
+
+         <Stack.Screen
+             name='ChatBot'
+             component={ChatBot}
+             options={{
+                  headerShown: false,
+                  title: "Assistant Bibliothèque"
+             }}
+         />
     </Stack.Navigator>
-) 
+)
 
 export default NavShop

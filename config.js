@@ -13,6 +13,8 @@ const firebaseConfig = {
   measurementId: "G-PWEJXF3Q4M"
 };
 
+
+
 const app = initializeApp(firebaseConfig);
 
 // Initialisation simple de l'authentification sans persistance

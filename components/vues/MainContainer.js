@@ -10,12 +10,14 @@ import { useCartCount } from '../utils/cart';
 import { useUnreadChatCount } from '../utils/chat';
 import SearchModal from '../composants/SearchModal';
 
+
 //Screens
 import VueUn from './VueUn'
 import PubCar from '../composants/PubCar'
 import PubRect from '../composants/PubRect'
 import Messages from './Messages'
-import Email from '../composants/message/Email'
+import Email from '../composants/message/EnhancedEmail'
+import ELearningPage from '../elearning/ElearningPage';
 import Recommend from '../composants/Recommend'
 import Produit from '../composants/achats/Produit'
 import Panier from '../composants/achats/Panier'
@@ -250,7 +252,7 @@ const MainContainer = ({ navigation, route }) => {
                   }}
               />
           )}
-          <Tab.Screen name={settingsName} component={NavOpenClass} />
+          <Tab.Screen name={settingsName} component={ELearningPage} />
           <Tab.Screen name={messagesName} component={Email} />
           <Tab.Screen name={detailsName} component={NavParams} />
         </Tab.Navigator>
